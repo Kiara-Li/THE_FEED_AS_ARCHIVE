@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>The Feed as Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#080808;--s1:#111;--s2:#181818;--s3:#1f1f1f;
+  --b0:rgba(240,239,235,.05);--b1:rgba(240,239,235,.09);
+  --b2:rgba(240,239,235,.18);--b3:rgba(240,239,235,.36);
+  --tx:#f0efeb;--m1:rgba(240,239,235,.54);--m2:rgba(240,239,235,.28);--m3:rgba(240,239,235,.13);
+  --red:#ff3b30;--redbg:rgba(255,59,48,.1);--redbr:rgba(255,59,48,.3);
+  --f-display:'Anton',sans-serif;--f-serif:'Libre Baskerville',Georgia,serif;
+  --f-sans:'IBM Plex Sans',sans-serif;--f-mono:'IBM Plex Mono','Courier New',monospace;
+  --nav:44px}
+body{background:var(--bg);color:var(--tx);font-family:var(--f-sans);font-size:13px}
+::selection{background:var(--red);color:#fff}
+input,button{outline:none}
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;height:var(--nav);display:flex;align-items:center;justify-content:space-between;padding:0 0 0 24px;border-bottom:.5px solid var(--b1);background:var(--bg);z-index:200}
+.nav-logo{font-family:var(--f-display);font-size:15px;letter-spacing:.06em;text-transform:uppercase}
+.nav-tabs{display:flex}
+.nav-tab{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:0 18px;height:var(--nav);display:flex;align-items:center;cursor:pointer;color:var(--m2);border:none;background:none;border-bottom:2px solid transparent}
+.nav-tab:hover{color:var(--m1)}
+.nav-tab.active{color:var(--tx);border-bottom-color:var(--red)}
+#nav-counter{background:var(--red);color:#000;padding:0 20px;height:var(--nav);display:flex;align-items:center;font-family:var(--f-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;white-space:nowrap}
+#nav-counter.cleared{background:var(--s2);color:var(--m2)}
+/* VIEWS */
+.view{position:fixed;top:var(--nav);left:0;right:0;bottom:0;display:none}
+.view.active{display:flex}
+.col{height:100%;overflow-y:auto;overflow-x:hidden}
+.col::-webkit-scrollbar{width:2px}
+.col::-webkit-scrollbar-thumb{background:var(--b2)}
+.badge{font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;white-space:nowrap;flex-shrink:0;display:inline-block}
+.badge-suppressed,.badge-removed{background:var(--redbg);border:.5px solid var(--red);color:var(--red)}
+.badge-fabricated{background:rgba(240,239,235,.08);border:.5px solid var(--b3);color:var(--m1)}
+/* ARCHIVE */
+#archive-view{flex-direction:row}
+#arc-filter{width:172px;flex-shrink:0;border-right:.5px solid var(--b1);background:var(--s1);display:flex;flex-direction:column}
+#arc-filter-scroll{flex:1;overflow-y:auto}
+#arc-filter-scroll::-webkit-scrollbar{width:2px}
+#arc-filter-scroll::-webkit-scrollbar-thumb{background:var(--b1)}
+.col-head{padding:14px 16px 10px;border-bottom:.5px solid var(--b0);font-family:var(--f-sans);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--m2)}
+.fg-label{font-family:var(--f-sans);font-size:10px;letter-spacing:.02em;color:var(--m3);text-transform:uppercase;padding:16px 16px 6px;display:block}
+.fi{display:flex;align-items:center;gap:9px;padding:5px 16px;cursor:pointer}
+.fi:hover .fi-t{color:var(--m1)}
+.fi.on .fi-t{color:var(--tx)}
+.fi-box{width:11px;height:11px;flex-shrink:0;border:.5px solid var(--b2);position:relative}
+.fi.on .fi-box{border-color:var(--red)}
+.fi.on .fi-box::after{content:'';position:absolute;top:2px;left:2px;right:2px;bottom:2px;background:var(--red)}
+.fi-t{font-family:var(--f-mono);font-size:11px;color:var(--m2)}
+.filter-stats{padding:14px 16px;border-top:.5px solid var(--b0);font-family:var(--f-mono);font-size:10px;color:var(--m2);line-height:2}
+.filter-stats .hi{color:var(--red)}
+#arc-results{width:296px;flex-shrink:0;border-right:.5px solid var(--b1)}
+.results-bar{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:.5px solid var(--b0);position:sticky;top:0;background:var(--bg);z-index:10}
+.results-bar-l{font-family:var(--f-sans);font-size:10px;letter-spacing:.02em;color:var(--m2);text-transform:uppercase}
+.results-bar-r{font-family:var(--f-sans);font-size:10px;color:var(--m3)}
+.chip{display:none;align-items:center;gap:6px;margin:8px 16px;padding:4px 9px;border:.5px solid var(--red);font-family:var(--f-mono);font-size:10px;color:var(--red);cursor:pointer}
+.chip.show{display:flex}
+.ri{padding:14px 16px;border-bottom:.5px solid var(--b0);cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-height:52px}
+.ri:hover{background:var(--s1)}
+.ri.sel{background:var(--s1);border-left:2px solid var(--red);padding-left:14px}
+.ri-title{font-family:var(--f-serif);font-style:italic;font-size:13px;color:var(--tx);line-height:1.45;flex:1}
+.ri.suppressed .ri-title{color:var(--m2)}
+.ri.removed .ri-title{color:var(--m3);text-decoration:line-through}
+.ri.fabricated .ri-title{color:var(--m1)}
+#arc-viewer{flex:1}
+.v-empty{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px}
+.v-empty-t{font-family:var(--f-sans);font-size:10px;letter-spacing:.1em;color:var(--m3);text-transform:uppercase;text-align:center;line-height:2;font-size:28px}
+.vc{padding:48px 52px 80px;max-width:720px}
+.vc-fig{font-family:var(--f-sans);font-size:10px;letter-spacing:.04em;color:var(--red);text-transform:uppercase;margin-bottom:14px}
+.vc-title{font-family:var(--f-display);font-size:26px;line-height:1.15;text-transform:uppercase;margin-bottom:8px}
+.vc-source{font-family:var(--f-mono);font-size:11px;color:var(--m1);margin-bottom:32px;padding-bottom:24px;border-bottom:.5px solid var(--b1)}
+.vc-quote{font-family:var(--f-serif);font-style:italic;font-size:17px;line-height:1.8;border-left:2px solid var(--red);padding-left:24px;margin-bottom:28px}
+.vc-caption{font-family:var(--f-serif);font-size:15px;line-height:1.8;color:var(--m1);margin-bottom:32px}
+.vc-img{width:100%;aspect-ratio:16/9;background:var(--s2);border:.5px solid var(--b1);display:flex;align-items:center;justify-content:center;margin-bottom:14px;position:relative;overflow:hidden}
+.vc-img.suppressed{opacity:.15}
+.vc-img-label{font-family:var(--f-mono);font-size:11px;color:var(--m3)}
+.supp-rec{border:.5px solid var(--red);margin-bottom:32px}
+.supp-rec-h{background:var(--redbg);padding:10px 16px;border-bottom:.5px solid var(--redbr);font-family:var(--f-sans);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--red)}
+.supp-rec-body{padding:12px 16px;display:flex;flex-direction:column;gap:6px}
+.supp-row{display:flex;gap:12px}
+.supp-k{font-family:var(--f-sans);font-size:10px;color:var(--m3);text-transform:uppercase;letter-spacing:.02em;min-width:130px}
+.supp-v{font-family:var(--f-sans);font-size:10px;color:var(--m1);line-height:1.6}
+.essay-return{display:block;margin-top:16px;padding:14px 18px;background:var(--red);color:#000;font-family:var(--f-sans);font-size:12px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;border:none;width:100%;text-align:left;font-weight:600}
+/* ESSAY */
+#essay-view{flex-direction:row}
+#essay-index{width:208px;flex-shrink:0;border-right:.5px solid var(--b1);background:var(--s1);display:flex;flex-direction:column}
+.idx-scroll{flex:1;overflow-y:auto}
+.idx-scroll::-webkit-scrollbar{width:2px}
+.idx-progress-wrap{height:2px;background:var(--b1);margin:0 16px}
+.idx-progress-fill{height:100%;background:var(--red);width:0%}
+.chap-list{padding:16px 0}
+.ci{padding:7px 16px 7px 18px;cursor:pointer;border-left:2px solid transparent}
+.ci.active{border-left-color:var(--red)}
+.ci.active .ci-name{color:var(--tx)}
+.ci-num{font-family:var(--f-sans);font-size:9px;letter-spacing:.04em;color:var(--m3);text-transform:uppercase}
+.ci-name{font-family:var(--f-mono);font-size:11px;color:var(--m2);line-height:1.4;margin-top:2px}
+.ci:hover .ci-name{color:var(--m1)}
+.idx-div{height:.5px;background:var(--b0);margin:12px 0}
+.concepts{padding:0 16px 16px}
+.concepts-label{font-family:var(--f-sans);font-size:10px;letter-spacing:.02em;text-transform:uppercase;color:var(--m3);margin-bottom:10px}
+.con{display:flex;align-items:center;gap:9px;padding:4px 0;cursor:pointer}
+.con-dot{width:7px;height:7px;flex-shrink:0;border:.5px solid var(--b2)}
+.con.active .con-dot{background:var(--red);border-color:var(--red)}
+.con-name{font-family:var(--f-mono);font-size:11px;color:var(--m3)}
+.con.active .con-name,.con:hover .con-name{color:var(--m1)}
+#essay-panel{width:296px;flex-shrink:0;border-right:.5px solid var(--b1)}
+.panel-head{padding:12px 16px;border-bottom:.5px solid var(--b0);font-family:var(--f-sans);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--m2);position:sticky;top:0;background:var(--bg);z-index:10}
+.arc-card{margin:20px 16px;border:.5px solid var(--b1);background:var(--s1);opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s}
+.arc-card.visible{opacity:1;transform:translateY(0)}
+.arc-card-img{width:100%;aspect-ratio:4/3;background:var(--s2);display:flex;align-items:center;justify-content:center;border-bottom:.5px solid var(--b0);overflow:hidden;position:relative}
+.arc-card-img.supp{opacity:.15}
+.arc-card-img img{width:100%;height:100%;object-fit:cover}
+.arc-card-img-label{font-family:var(--f-mono);font-size:10px;color:var(--m3)}
+.arc-card-fig{font-family:var(--f-sans);font-size:10px;letter-spacing:.04em;color:var(--red);text-transform:uppercase;padding:10px 14px 4px}
+.arc-card-cap{padding:4px 14px 14px;font-family:var(--f-sans);font-size:12px;line-height:1.6;color:var(--m1)}
+.arc-card-quote{padding:20px 18px;font-family:var(--f-serif);font-style:italic;font-size:14px;line-height:1.75;border-left:2px solid var(--red);margin:16px}
+.arc-card-attr{padding:0 18px 16px;margin-top:-8px;font-family:var(--f-mono);font-size:10px;color:var(--m2)}
+.arc-card-open{display:block;padding:10px 14px;border-top:.5px solid var(--b0);font-family:var(--f-sans);font-size:10px;letter-spacing:.02em;color:var(--m3);cursor:pointer}
+.arc-card-open:hover{color:var(--red)}
+#essay-text{flex:1}
+#essay-text .e-scroll{height:100%;overflow-y:auto}
+#essay-text .e-scroll::-webkit-scrollbar{width:3px}
+#essay-text .e-scroll::-webkit-scrollbar-thumb{background:var(--b2)}
+.e-body{padding:52px 68px 100px;max-width:720px}
+.e-section{margin-bottom:80px;scroll-margin-top:60px}
+.sec-mark{font-family:var(--f-mono);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--red);margin-bottom:20px;padding-bottom:12px;border-bottom:.5px solid var(--b1);display:flex;align-items:center;gap:14px}
+.sec-mark::after{content:'';flex:1;height:.5px;background:var(--b1)}
+.sec-title{font-family:var(--f-display);font-size:42px;line-height:1.0;text-transform:uppercase;margin-bottom:12px}
+.sec-subtitle{font-family:var(--f-serif);font-style:italic;font-size:17px;color:var(--m1);margin-bottom:40px;line-height:1.5}
+.ep{font-family:var(--f-serif);font-size:18px;line-height:1.9;margin-bottom:26px}
+.case-label{font-family:var(--f-sans);font-size:10px;letter-spacing:.04em;color:var(--m2);margin-bottom:18px;margin-top:56px;padding:10px 0;border-top:.5px solid var(--b1);text-transform:uppercase}
+.ht{font-family:var(--f-mono);font-size:15px;background:var(--s2);border:.5px solid var(--b2);color:var(--red);padding:1px 8px;cursor:pointer}
+.ht:hover{background:var(--s3)}
+.fr,.cit{font-family:var(--f-sans);font-size:11px;background:var(--s2);border:.5px solid var(--b2);color:var(--m1);padding:2px 8px;cursor:pointer;display:inline-block;margin-left:2px}
+.fr:hover,.cit:hover{background:var(--s3);color:var(--tx)}
+.sqb{border-left:2px solid var(--red);padding:16px 24px}
+.sqb-label{font-family:var(--f-sans);font-size:10px;letter-spacing:.04em;color:var(--red);text-transform:uppercase;display:block;margin-bottom:12px}
+.sqb-text{font-family:var(--f-serif);font-style:italic;font-size:18px;line-height:1.9;color:var(--m1)}
+.as-w{position:relative;display:inline}
+.as{border-bottom:1px dotted var(--m2);cursor:help}
+.as-tip{display:none;position:absolute;bottom:130%;left:0;background:var(--s3);border:.5px solid var(--b2);padding:8px 12px;font-family:var(--f-mono);font-size:10px;color:var(--m1);white-space:nowrap;z-index:50;min-width:300px;line-height:1.7}
+.as-w:hover .as-tip{display:block}
+.ai-w{border-left:2px solid var(--red);padding:16px 24px;margin:28px 0;background:var(--s2)}
+.ai-w-label{font-family:var(--f-sans);font-size:10px;letter-spacing:.06em;color:var(--red);text-transform:uppercase;display:block;margin-bottom:12px}
+.ai-w-text{font-family:var(--f-serif);font-size:17px;line-height:1.85;color:var(--m1)}
+.lock-block{margin:30px 0;background:var(--red)}
+.lock-header{padding:14px 20px;border-bottom:.5px solid rgba(0,0,0,.18)}
+.lock-title{font-family:var(--f-mono);font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#000;font-weight:600}
+.lock-body{padding:18px 20px}
+.lock-desc{font-family:var(--f-sans);font-size:13px;color:#000;line-height:1.6;margin-bottom:16px;opacity:.65}
+.lock-input-row{display:flex;align-items:stretch}
+.lock-input{flex:1;background:#000;border:none;color:var(--tx);padding:12px 14px;font-size:13px;letter-spacing:.04em;font-family:var(--f-mono)}
+.lock-input::placeholder{color:var(--m2)}
+.lock-btn{background:#000;color:var(--red);border:none;padding:12px 20px;font-family:var(--f-sans);font-size:12px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;white-space:nowrap;font-weight:600}
+.lock-btn:hover{background:var(--s2)}
+.lock-error{font-family:var(--f-sans);font-size:12px;color:#000;margin-top:10px;display:none;opacity:.55}
+.lock-error.show{display:block}
+.lock-hint{font-family:var(--f-sans);font-size:11px;color:#000;margin-top:8px;opacity:.4}
+.lock-revealed{display:none;background:var(--s1)}
+.lock-revealed.open{display:block}
+.lock-revealed-inner{padding:24px 20px}
+.lock-block.done .lock-title{opacity:.5}
+.lock-block.done .lock-body{display:none}
+.search-sim{background:#000;padding:16px 20px}
+.search-sim-bar{background:var(--s2);border:.5px solid var(--b2);padding:10px 14px;font-family:var(--f-mono);font-size:13px;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.search-sim-query{color:var(--red)}
+.search-sim-label{font-family:var(--f-sans);font-size:10px;letter-spacing:.02em;text-transform:uppercase;color:var(--m3);margin-bottom:10px}
+.sr-list{display:flex;flex-direction:column;gap:1px}
+.sr-item{padding:12px 14px;background:var(--s2);cursor:pointer;display:flex;align-items:flex-start;gap:12px}
+.sr-item:hover{background:var(--s3)}
+.sr-num{font-family:var(--f-mono);font-size:10px;color:var(--m3);padding-top:2px;min-width:16px}
+.sr-text{font-family:var(--f-sans);font-size:13px;color:var(--m1);line-height:1.5}
+.sr-domain{font-family:var(--f-mono);font-size:10px;color:var(--m3);margin-top:2px}
+.sr-item.wrong{background:rgba(255,59,48,.15)!important}
+.sr-item.correct-sel{background:rgba(240,239,235,.06)!important}
+.sr-correct-msg{background:var(--s1);border-top:.5px solid var(--b1);padding:14px;font-family:var(--f-sans);font-size:12px;color:var(--m1);line-height:1.7;display:none}
+.sr-correct-msg.show{display:block}
+/* REELS */
+#reels-view{flex-direction:row}
+#reels-feed{width:400px;flex-shrink:0;height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;border-right:.5px solid var(--b1);position:relative}
+#reels-feed::-webkit-scrollbar{display:none}
+.reel-card{width:100%;height:100%;scroll-snap-align:start;position:relative;background:var(--s2);display:flex;flex-direction:column;justify-content:flex-end;cursor:pointer;overflow:hidden;border-bottom:.5px solid var(--b1)}
+.reel-card.reel-active{outline:1.5px solid var(--red);outline-offset:-1.5px}
+.reel-media{position:absolute;inset:0;background:var(--s2);display:flex;align-items:center;justify-content:center}
+.reel-media video,.reel-media iframe{width:100%;height:100%;object-fit:cover;border:0}
+.reel-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px}
+.reel-ph-n{font-family:var(--f-mono);font-size:32px;color:var(--m3);opacity:.15}
+.reel-ph-t{font-family:var(--f-sans);font-size:10px;color:var(--m3);text-transform:uppercase;text-align:center}
+.reel-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(8,8,8,.9) 0%,rgba(8,8,8,0) 55%);pointer-events:none}
+.reel-score-bar{position:absolute;top:0;left:0;right:0;height:2px;background:var(--b0);z-index:3}
+.reel-score-fill{height:100%;background:var(--red)}
+.reel-info{position:relative;z-index:2;padding:0 18px 20px}
+.reel-tag{display:inline-block;font-family:var(--f-sans);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--red);margin-bottom:7px}
+.reel-name{font-family:var(--f-serif);font-style:italic;font-size:15px;line-height:1.4;margin-bottom:5px}
+.reel-desc{font-family:var(--f-sans);font-size:11px;color:var(--m2)}
+.reel-dots{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:5px;z-index:20}
+.reel-dot{width:3px;height:3px;background:var(--m3);border-radius:50%;cursor:pointer}
+.reel-dot.on{background:var(--red);height:18px;border-radius:2px}
+#reels-detail{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.rd-head{padding:16px 28px;border-bottom:.5px solid var(--b1);display:flex;align-items:baseline;gap:14px;flex-shrink:0;display:none}
+.rd-head-num{font-family:var(--f-mono);font-size:10px;color:var(--red)}
+.rd-head-title{font-family:var(--f-serif);font-style:italic;font-size:17px}
+#rd-body-scroll{flex:1;overflow-y:auto;padding:28px 40px 60px}
+#rd-body-scroll::-webkit-scrollbar{width:2px}
+#rd-body-scroll::-webkit-scrollbar-thumb{background:var(--b2)}
+.rd-label{font-family:var(--f-sans);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--m3);margin-bottom:8px;display:block}
+.rd-score-wrap{border:.5px solid var(--b1);padding:16px;margin-bottom:28px}
+.rd-score-track{height:3px;background:var(--b1);margin:8px 0 5px}
+.rd-score-fill{height:100%;background:var(--red)}
+.rd-essay-btn{display:inline-block;background:var(--red);color:#000;font-family:var(--f-sans);font-size:11px;letter-spacing:.04em;text-transform:uppercase;font-weight:600;padding:11px 20px;cursor:pointer;border:none}
+.rd-empty{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px}
+.rd-empty-t{font-family:var(--f-sans);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--m3);text-align:center;line-height:2}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">The Feed as Archive</span>
+  <div class="nav-tabs">
+    <button class="nav-tab" id="tab-archive" onclick="switchView('archive')">Archive</button>
+    <button class="nav-tab active" id="tab-essay" onclick="switchView('essay')">Essay</button>
+    <button class="nav-tab" id="tab-reels" onclick="switchView('reels')">Reels</button>
+  </div>
+  <span id="nav-counter">5 SECTIONS SUPPRESSED</span>
+</nav>
+
+<div class="view" id="archive-view">
+  <div id="arc-filter">
+    <div class="col-head">Find items by</div>
+    <div id="arc-filter-scroll">
+      <span class="fg-label">Type</span>
+      <label class="fi" data-f="type" data-v="quote"><div class="fi-box"></div><span class="fi-t">Quote</span></label>
+      <label class="fi" data-f="type" data-v="image"><div class="fi-box"></div><span class="fi-t">Image</span></label>
+      <label class="fi" data-f="type" data-v="screenshot"><div class="fi-box"></div><span class="fi-t">Screenshot</span></label>
+      <label class="fi" data-f="type" data-v="bibliography"><div class="fi-box"></div><span class="fi-t">Bibliography</span></label>
+      <span class="fg-label">Status</span>
+      <label class="fi" data-f="status" data-v="visible"><div class="fi-box"></div><span class="fi-t">Visible</span></label>
+      <label class="fi" data-f="status" data-v="suppressed"><div class="fi-box"></div><span class="fi-t">Suppressed</span></label>
+      <label class="fi" data-f="status" data-v="removed"><div class="fi-box"></div><span class="fi-t">Removed</span></label>
+      <label class="fi" data-f="status" data-v="fabricated"><div class="fi-box"></div><span class="fi-t">Fabricated</span></label>
+      <span class="fg-label">Section</span>
+      <label class="fi" data-f="section" data-v="I"><div class="fi-box"></div><span class="fi-t">I &mdash; Introduction</span></label>
+      <label class="fi" data-f="section" data-v="II"><div class="fi-box"></div><span class="fi-t">II &mdash; Theory</span></label>
+      <label class="fi" data-f="section" data-v="III"><div class="fi-box"></div><span class="fi-t">III &mdash; Museum</span></label>
+      <label class="fi" data-f="section" data-v="IV"><div class="fi-box"></div><span class="fi-t">IV &mdash; Case Studies</span></label>
+      <label class="fi" data-f="section" data-v="Interlude"><div class="fi-box"></div><span class="fi-t">Interlude</span></label>
+      <label class="fi" data-f="section" data-v="V"><div class="fi-box"></div><span class="fi-t">V &mdash; AI Archive</span></label>
+      <span class="fg-label">Theorist</span>
+      <label class="fi" data-f="theorist" data-v="Foucault"><div class="fi-box"></div><span class="fi-t">Foucault</span></label>
+      <label class="fi" data-f="theorist" data-v="Derrida"><div class="fi-box"></div><span class="fi-t">Derrida</span></label>
+      <label class="fi" data-f="theorist" data-v="Steyerl"><div class="fi-box"></div><span class="fi-t">Steyerl</span></label>
+      <label class="fi" data-f="theorist" data-v="Noble"><div class="fi-box"></div><span class="fi-t">Noble</span></label>
+      <label class="fi" data-f="theorist" data-v="Hicks"><div class="fi-box"></div><span class="fi-t">Hicks</span></label>
+      <label class="fi" data-f="theorist" data-v="Makhortykh"><div class="fi-box"></div><span class="fi-t">Makhortykh</span></label>
+      <label class="fi" data-f="theorist" data-v="Renno"><div class="fi-box"></div><span class="fi-t">Renn&oacute;</span></label>
+      <label class="fi" data-f="theorist" data-v="Kaphar"><div class="fi-box"></div><span class="fi-t">Kaphar</span></label>
+    </div>
+    <div class="filter-stats">
+      <div id="s-total">loading&hellip;</div>
+      <div id="s-supp"><span class="hi">0</span> suppressed</div>
+      <div id="s-rem"><span class="hi">0</span> removed</div>
+      <div id="s-fab"><span class="hi">0</span> fabricated</div>
+    </div>
+  </div>
+  <div class="col" id="arc-results">
+    <div class="results-bar">
+      <span class="results-bar-l">Results</span>
+      <span class="results-bar-r" id="rc">&mdash;</span>
+    </div>
+    <div class="chip" id="chip"></div>
+    <div id="rl"></div>
+  </div>
+  <div class="col" id="arc-viewer">
+    <div class="v-empty" id="v-empty">
+      <div class="v-empty-t">&larr;</div>
+      <div style="font-family:var(--f-sans);font-size:10px;letter-spacing:.1em;color:var(--m3);text-transform:uppercase;text-align:center;line-height:2">Select an item<br>from the results</div>
+    </div>
+    <div id="vca" style="display:none"></div>
+  </div>
+</div>
+
+<div class="view active" id="essay-view">
+  <div id="essay-index">
+    <div class="col-head">Reading Progress</div>
+    <div class="idx-scroll">
+      <div class="idx-progress-wrap"><div class="idx-progress-fill" id="ipf"></div></div>
+      <div class="chap-list">
+        <div class="ci active" data-s="intro"><div class="ci-num">I</div><div class="ci-name">Introduction</div></div>
+        <div class="ci" data-s="theory"><div class="ci-num">II</div><div class="ci-name">Theoretical Framework</div></div>
+        <div class="ci" data-s="museum"><div class="ci-num">III</div><div class="ci-name">Historical Touchpoint</div></div>
+        <div class="ci" data-s="cases"><div class="ci-num">IV</div><div class="ci-name">Case Studies</div></div>
+        <div class="ci" data-s="interlude"><div class="ci-num">&mdash;</div><div class="ci-name">Interlude</div></div>
+        <div class="ci" data-s="ai"><div class="ci-num">V</div><div class="ci-name">The AI Archive</div></div>
+        <div class="ci" data-s="conclusion"><div class="ci-num">VI</div><div class="ci-name">Conclusion</div></div>
+      </div>
+      <div class="idx-div"></div>
+      <div class="concepts">
+        <div class="concepts-label">Active Concepts</div>
+        <div class="con active" data-t="Foucault"><div class="con-dot"></div><span class="con-name">Foucault</span></div>
+        <div class="con" data-t="Derrida"><div class="con-dot"></div><span class="con-name">Derrida</span></div>
+        <div class="con" data-t="Steyerl"><div class="con-dot"></div><span class="con-name">Steyerl</span></div>
+        <div class="con" data-t="Noble"><div class="con-dot"></div><span class="con-name">Noble</span></div>
+        <div class="con" data-t="Hicks"><div class="con-dot"></div><span class="con-name">Hicks</span></div>
+        <div class="con" data-t="Makhortykh"><div class="con-dot"></div><span class="con-name">Makhortykh</span></div>
+        <div class="con" data-t="Renno"><div class="con-dot"></div><span class="con-name">Renn&oacute;</span></div>
+        <div class="con" data-t="Kaphar"><div class="con-dot"></div><span class="con-name">Kaphar</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="col" id="essay-panel">
+    <div class="panel-head">Archive</div>
+    <div id="panel-inner"></div>
+  </div>
+  <div id="essay-text">
+    <div class="e-scroll" id="e-scroll">
+<div class="e-body">
+
+<!-- ── I. INTRODUCTION ── -->
+<div class="e-section" id="s-intro" data-s="intro" data-c="Foucault,Derrida" data-card="glimpse">
+  <div class="sec-mark">I — Introduction</div>
+  <div class="sec-title">The Morning Manuscript</div>
+  <div class="sec-subtitle">Algorithmic Selection, Invisible Omission, and the Construction of Visible Reality</div>
+
+  <p class="ep">Every morning, before most people have had their coffee, an algorithm has already decided what kind of world they live in. This is not a metaphor. It is an operational description of how reality is distributed at planetary scale. I came to understand it not through theory but through practice. For several years I worked on both sides of the feed — managing Meta and Google advertising campaigns, operating TikTok and YouTube content accounts — and in that time I saw what most users are structurally prevented from seeing: visibility is not discovered. It is purchased, engineered, and withheld.</p>
+
+  <p class="ep">The feed does not surface what exists. It surfaces what has been paid to appear, what behavioral data predicts you will engage with, and what the platform's revenue model rewards. Everything else — the content that was produced, posted, and then quietly made to disappear — is not erased. It is simply rendered invisible. The distinction between these two things is the subject of this paper.</p>
+
+  <p class="ep">The archival object anchoring this argument is <em>Glimpse</em> <span class="cit" onclick="openCard('glimpse')">[Tetenbaum & Chen, 2011]</span>, an artist's book structured around a series of sleeve-cut windows: rectangular apertures that reveal only fragments of cards housed within each sleeve. The reader must perform a physical gesture — pulling the card out through the window — to access its full content. No fragment is complete. Every piece of legible meaning is contingent on an act of retrieval that the book's own architecture both invites and delays. The material logic of <em>Glimpse</em> — partial revelation, designed concealment, meaning contingent on the system's architecture rather than the world's fullness — is the formal argument of this paper made tangible.</p>
+
+  <p class="ep">The scale at which this logic now operates makes it impossible to treat as a curatorial concern alone. Billions of people receive their daily understanding of the world through TikTok, Instagram, Google Search, and YouTube. Through selection, ranking, and personalization — through the continuous operation of algorithmic systems whose criteria are proprietary, invisible, and unaccountable — they actively determine what becomes legible as "the world." What surfaces is the world. What does not surface does not, for most users, exist as an object of attention, concern, or thought.</p>
+
+  <p class="ep">This paper argues that algorithmic information feeds function not as windows onto reality but as dynamic archival systems — in <span class="ht" onclick="openCard('foucault-law')">#Foucault</span>'s sense, the operative law governing what can be seen; in <span class="ht" onclick="openCard('derrida-archon')">#Derrida</span>'s sense, a structure of power masquerading as neutral storage. Like the traditional archive, the feed writes reality through selection and omission. Unlike it, this power operates in real time, at planetary scale, and below the threshold of user awareness. The archive has always been a technology of power. What this paper asks is what happens when that technology becomes invisible infrastructure — and what happens when it begins not merely to curate, but to generate, the content it distributes. The argument proceeds through theoretical framework, historical precedent, three case studies, and a forward-looking analysis of AI-driven feed systems, arriving at a single conclusion: the archive is not becoming more neutral. It is becoming more total.</p>
+</div>
+
+<!-- ── II. THEORETICAL FRAMEWORK ── -->
+<div class="e-section" id="s-theory" data-s="theory" data-c="Foucault,Derrida,Steyerl" data-card="foucault-law">
+  <div class="sec-mark">II — Theoretical Framework</div>
+  <div class="sec-title">The Law of What Can Be Seen</div>
+
+  <p class="ep"><span class="ht" onclick="openCard('foucault-law')">#Foucault</span>'s concept of the archive, as developed in <em>The Archaeology of Knowledge</em> <span class="cit" onclick="openCard('foucault-law')">[1969]</span>, is not a description of a building or an institution. It is a description of a system. The archive, for Foucault, is "the law of what can be said" — the set of rules governing which statements can appear as legitimate knowledge in a given historical moment. It operates through managed scarcity: what enters the field of discourse is not the natural emergence of truth from a neutral medium, but the product of power acting on language. Crucially, and this is the feature of Foucault's formulation that matters most here, the archive is invisible to those who inhabit it. It cannot be described in its totality from within the historical moment it governs. Its authority depends precisely on this invisibility. The archive does not announce itself as a system of power; it presents itself as the given conditions of intelligibility.</p>
+
+  <!-- LOCK: "what can be said" -->
+  <div class="lock-block" id="lock-theory" data-key="what can be said">
+    <div class="lock-header"><div class="lock-title">Content suppressed — keyword required</div></div>
+    <div class="lock-body">
+      <div class="lock-desc">A phrase from the text above will restore access.</div>
+      <div class="lock-input-row">
+        <input class="lock-input" id="inp-theory" placeholder="Enter keyword...">
+        <button class="lock-btn" onclick="tryUnlock('theory')">Search</button>
+      </div>
+      <div class="lock-error" id="err-theory">No results found.</div>
+      <div class="lock-hint">Hint: what does the archive govern?</div>
+    </div>
+    <div class="lock-revealed" id="rev-theory">
+      <div class="lock-revealed-inner">
+        <div class="sqb">
+          <span class="sqb-label">Restored — "what can be said"</span>
+          <div class="sqb-text">This paper extends Foucault's formulation from statements to images, and from historical discourse to real-time digital infrastructure. The algorithmic feed is the contemporary archive governing what can be seen. It determines, through selection and ranking, which images, which claims, which events, which identities surface as objects of knowledge — and which are compressed into algorithmic irrelevance. Like Foucault's archive, it operates not by prohibiting specific content but by structuring the conditions of visibility. And like Foucault's archive, it is invisible to those who inhabit it: users experience the feed as the world rather than as a system mediating access to the world. The managed scarcity is total precisely because it is imperceptible.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="ep"><span class="ht" onclick="openCard('derrida-archon')">#Derrida</span>'s <em>Archive Fever</em> <span class="cit" onclick="openCard('derrida-archon')">[1996]</span> supplies a second theoretical register. Where Foucault describes the archive as a discursive system, Derrida identifies the archive as a structure of power organized around what he calls the archontic principle: the authority to house records is simultaneously the authority to interpret them. The archons — those who control the archive — determine not only what is preserved but what it means. And the archive's constitutive feature, for Derrida, is absence: the structuring silence, the repression, the document that could in principle have been filed but was not. Applied to the algorithmic feed, Derrida's formulation identifies the platform as the contemporary archon. Google's PageRank algorithm, TikTok's recommendation system, Meta's content graph: these are the mechanisms of archontic authority. They control the ordering of information, and therefore the production of meaning, without public deliberation and without accountability. The black-box design of algorithmic systems — users cannot inspect the criteria by which content is ranked or suppressed — is the contemporary form of archontic opacity.</p>
+
+  <p class="ep"><span class="ht" onclick="openCard('steyerl-poor')">#Steyerl</span>'s "In Defense of the Poor Image" <span class="cit" onclick="openCard('steyerl-poor')">[2009]</span> supplies the third register, and the one that connects the theoretical to the material. Steyerl argues that images exist within a class society of appearances, in which resolution functions as currency. High-resolution images occupy positions of institutional privilege — they are displayed in galleries, licensed by media organizations, reproduced in books. Poor images — compressed, degraded, circulating in low-resolution copies through unofficial channels — are ranked and valued according to their resolution, which is to say according to their relationship to commercial and institutional power. The algorithmic ranking system is the management mechanism of this image class society in its digital form. It determines which content receives the "high-resolution" visibility of the first page — and which is compressed into algorithmic irrelevance, legible in principle but invisible in practice.</p>
+
+  <p class="ep">The theoretical synthesis this paper proposes is the convergence of all three frameworks: Foucault's archive governs the boundary of the visible; Derrida's archival structure is produced by power rather than truth; Steyerl's image class society installs commercial value as its resolution currency. To analyze algorithmic omission adequately requires all three registers simultaneously, because omission operates at all three levels at once. Some content is suppressed because it violates platform policy; some because it fails engagement metrics; some because it threatens advertiser comfort; some because the design of the system encodes the biases of its makers. These are not the same mechanism, but they share a single structural effect: they determine what the world looks like. This is the archive function of the feed.</p>
+</div>
+
+<!-- ── III. MUSEUM ── -->
+<div class="e-section" id="s-museum" data-s="museum" data-c="Hicks,Rennó,Kaphar" data-card="hicks-benin">
+  <div class="sec-mark">III — Historical Touchpoint</div>
+  <div class="sec-title">The Museum as Structural Precedent</div>
+
+  <p class="ep">The argument that information systems exercise archival power through selection and omission is not new. It predates the algorithm by centuries. The history of the museum offers the most clarifying precedent — clarifying because it is close enough to be legible and distant enough to be visible as history rather than as the given conditions of knowledge.</p>
+
+  <p class="ep">In February 1897, a British military expedition entered the Kingdom of Benin in what is today southern Nigeria, burned its capital, deposed its Oba, and looted approximately three thousand objects — bronze plaques, ivory carvings, royal regalia — from the royal palace and its precincts. These objects were dispersed across hundreds of Western museums and private collections, where the majority of them remain. <span class="ht" onclick="openCard('hicks-benin')">#Hicks</span>, in <em>The Brutish Museums</em> <span class="cit" onclick="openCard('hicks-benin')">[2020]</span>, argues that this dispersal is not a historical event that concluded in 1897. It is an ongoing one. Every day that the museum doors are unlocked and these trophies are displayed to the public, the damage is renewed. The museum's curatorial apparatus — what to display, in what frame, with what interpretive narrative — actively rewrites history rather than preserving it. Looted objects are recast as "universal heritage," as "artistic masterpieces," as "anthropological documents." The act of taking, and the sovereignty of those from whom objects were taken, are structurally omitted from exhibition discourse. The archive does not record their absence. The archive is their absence.</p>
+
+  <!-- LOCK: "necrography" -->
+  <div class="lock-block" id="lock-museum" data-key="necrography">
+    <div class="lock-header"><div class="lock-title">Content suppressed — keyword required</div></div>
+    <div class="lock-body">
+      <div class="lock-desc">Hicks names his methodological counter-method. Enter the term to restore this section.</div>
+      <div class="lock-input-row">
+        <input class="lock-input" id="inp-museum" placeholder="Enter keyword...">
+        <button class="lock-btn" onclick="tryUnlock('museum')">Search</button>
+      </div>
+      <div class="lock-error" id="err-museum">No results found.</div>
+      <div class="lock-hint">Hint: a death-history. The opposite of object biography.</div>
+    </div>
+    <div class="lock-revealed" id="rev-museum">
+      <div class="lock-revealed-inner">
+        <div class="sqb">
+          <span class="sqb-label">Restored — "necrography"</span>
+          <div class="sqb-text"><span class="ht" onclick="openCard('hicks-benin')">#Hicks</span> proposes, against the traditional "object biography" framework, a methodology he calls <em>necrography</em>: death-histories, or histories of loss. Necrography asks not what objects gained upon entering museum collections, but what their originators were dispossessed of. It reorients the archival inquiry from accumulation to erasure — from what was preserved to what was destroyed, and at whose expense. The central question of necrography is not what the archive shows. It is what the archive makes disappear. This methodological reorientation is the historical mirror of this paper's inquiry into algorithmic omission. The structural parallel between the museum and the feed is not merely analogical; it is constitutive. Both systems exercise archival power through the same sequence of operations: selection, framing, omission, and the naturalization of that sequence as neutral stewardship. The museum naturalizes looting as preservation. The feed naturalizes commercial ranking as relevance. Each morning the museum opens its doors and renews a specific version of history. Each morning the feed refreshes and renews a specific version of the present. The mechanism is the same. The scale is different.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="ep">The structural parallel between museum and feed is not merely analogical; it is constitutive. Consider the Elgin Marbles — sculptures from the East pediment of the Parthenon, removed from Athens between 1801 and 1812 under documents of disputed legitimacy, and displayed at the British Museum ever since <span class="cit" onclick="openCard('parthenon-pediment')">[Fig. A]</span>. Greece has formally requested their return since 1983. The British Museum's continued refusal to repatriate is not inertia — it is an active archival decision, renewed daily, about whose version of history occupies the first screen.</p>
+
+  <p class="ep">Artists working in this space have developed counter-archival methods that parallel the necrographic orientation this paper proposes. Brazilian artist <span class="ht" onclick="openCard('renno-recycled')">#Rennó</span> recycles existing vernacular photographs — identification shots, found portraits, the "lowest categories of the image" — to recover "the little stories of the downtrodden and the vanquished" that successive political regimes have sought to suppress. Her practice of image conservation and recycling, informed by Vilém Flusser's concept of an "ecology of images," treats the archive not as authoritative storage but as material to be redistributed against the grain of institutional power.</p>
+
+  <p class="ep"><span class="ht" onclick="openCard('kaphar-process')">#Kaphar</span> operates directly inside the Western archive — appropriating canonical paintings, then cutting away figures, veiling faces, or burying subjects beneath layers of canvas. These are not aesthetic gestures; they are procedural metaphors for erasure, suppression, and omission within historical record-keeping. Kaphar's process makes absence as legible as presence, refusing the closure that would allow historical reckoning to feel complete. The same methodological commitment drives the author's own work <span class="cit" onclick="openCard('universal-museum-myth')">[Fig. B]</span> — a book design project that traces the colonial plunder of four cultures (the Tlingit, the Parthenon, China's Yuanmingyuan, Benin City) before turning, in its latter half, toward abstraction and restitution: the "X" on the opening page marking the transformation from a universal "+" to a definitive act of return.</p>
+
+  <p class="ep">Jeff Wall's <em>Dead Troops Talk</em> <span class="cit" onclick="openCard('jeff-wall-dead-troops')">[1992]</span> stages a fictional aftermath of a Soviet ambush in Afghanistan — dead soldiers interacting, oblivious to their own deaths. The work refuses documentary photography's claim to neutrality while using its visual language. As a counter-archival gesture, it makes the undocumented visible through deliberate fabrication — a strategy that anticipates questions this paper raises about the generative archive: what happens when the archive begins not merely to suppress the record but to generate one in its place?</p>
+</div>
+
+<!-- ── IV. CASE STUDIES ── -->
+<div class="e-section" id="s-cases" data-s="cases" data-c="Makhortykh,Noble,Steyerl" data-card="holocaust-audit">
+  <div class="sec-mark">IV — Case Studies</div>
+  <div class="sec-title">Three Sites of Algorithmic Omission</div>
+
+  <p class="ep">The following three cases demonstrate, across different domains, that algorithmic omission is not incidental but systemic — a consistent expression of the archive power theorized above. Each case illuminates a different face of the same structure. Together, they argue that the feed does not passively distribute a pre-existing world. It produces the world it appears to reflect.</p>
+
+  <div class="case-label">Case Study I — The Visual Archive of Historical Memory</div>
+
+  <p class="ep">In a 2021 study published in <em>First Monday</em>, <span class="ht" onclick="openCard('holocaust-audit')">#Makhortykh</span>, Urman, and Ulloa <span class="cit" onclick="openCard('holocaust-audit')">[2021]</span> conducted a large-scale algorithmic audit of image search results for the keyword "Holocaust" across six major search engines — Google, Bing, Yahoo, Baidu, Yandex, and DuckDuckGo — deploying two hundred virtual agents to simulate user searches from different geographic and demographic positions. The study documents five forms of systematic malperformance in the image results: misattribution, overrepresentation, trivialization, revisionism, and antisemitism. The aggregate picture is a visual archive of historical memory that is systematically distorted — not randomly, and not by accident.</p>
+
+  <!-- LOCK: "Holocaust by bullets" -->
+  <div class="lock-block" id="lock-holocaust" data-key="holocaust by bullets">
+    <div class="lock-header"><div class="lock-title">1,500,000 deaths — no results found</div></div>
+    <div class="lock-body">
+      <div class="lock-desc">This content does not appear in image search results. Enter the suppressed historical term to restore it.</div>
+      <div class="lock-input-row">
+        <input class="lock-input" id="inp-holocaust" placeholder="Search for what is missing...">
+        <button class="lock-btn" onclick="tryUnlock('holocaust')">Search</button>
+      </div>
+      <div class="lock-error" id="err-holocaust">The archive has not indexed this term.</div>
+      <div class="lock-hint">Hint: approximately 1.5 million deaths in Eastern Europe, absent from all search results.</div>
+    </div>
+    <div class="lock-revealed" id="rev-holocaust">
+      <div class="lock-revealed-inner">
+        <div class="sqb">
+          <span class="sqb-label">Restored — "Holocaust by bullets"</span>
+          <div class="sqb-text">The most structurally significant finding is not the presence of revisionist or antisemitic content, disturbing as these are. It is the pattern of overrepresentation and absence that organizes the whole. Auschwitz-Birkenau — the largest Nazi extermination site and, after the war, the site of an internationally recognized museum and memorial complex — appears in up to eighty percent of results across certain search engines. The "Holocaust by bullets" in Eastern Europe, in which mobile killing units shot approximately 1.5 million Jewish people in open-air massacres across occupied Soviet territory between 1941 and 1943, is nearly entirely absent from search outputs. This is not a difference in historical significance. The Holocaust by bullets accounts for roughly a quarter of total Nazi genocide victims. Its near-total absence from algorithmic visual results is the product of a specific mechanism: Auschwitz is a major international tourist destination, generating the kind of commercially legible web traffic that algorithmic ranking systems reward. Its visual record is high-resolution, institutionally authorized, widely reproduced, and deeply embedded in the commercial infrastructure of the web. The Eastern European massacre sites are not. This is <span class="ht" onclick="openCard('steyerl-poor')">#Steyerl</span>'s image class society operating in the domain of historical memory: visibility is determined by commercial value, not historical significance or ethical responsibility.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="ep">The authors make explicit what is only implicit in most discussions of search algorithms: they frame image search not as a library function but as an exhibition one. Unlike text search, which operates as a kind of catalog — directing users to sources where information can be found — image search highlights specific visual aspects of a phenomenon in a way structurally analogous to a museum exhibition. The algorithmic system has replaced the human curator as gatekeeper of historical memory, without inheriting any of the ethical frameworks — informed by scholarship, accountability, and the obligations of representation — that the curatorial tradition attempts to maintain.</p>
+
+  <div class="case-label" style="margin-top:64px">Case Study II — The Architecture of Racial Invisibility</div>
+
+  <p class="ep">In 2010, <span class="ht" onclick="openCard('noble-search')">#Noble</span> conducted a Google image search for the phrase "black girls" while looking for age-appropriate content for her stepdaughter and nieces. The first result was a pornographic website. When she repeated the search two years later, the results were substantially similar. What began as a personal observation became the foundation of a systematic research project, published in 2018 as <em>Algorithms of Oppression</em> <span class="cit" onclick="openCard('noble-search')">[2018]</span>, documenting how Google's ranking system consistently associates Black women and girls with pornographic, stereotypical, and dehumanizing content while suppressing accurate, complex, and self-authored representations. Noble names this pattern <em>technological redlining</em> — an extension of the historical practice of racially discriminatory spatial zoning into the architecture of digital information infrastructure.</p>
+
+  <!-- LOCK: Noble choice mechanic -->
+  <div class="lock-block" id="lock-noble">
+    <div class="lock-header"><div class="lock-title">Noble searched Google for content for her stepdaughter and nieces</div></div>
+    <div class="lock-body">
+      <div class="lock-desc">These are illustrative results representing the pattern Noble documented in 2010. Find what she was actually looking for.</div>
+      <div class="search-sim">
+        <div class="search-sim-bar">
+          <span style="color:var(--m3);font-family:var(--f-mono);font-size:11px">Google</span>
+          <span style="flex:1;margin:0 12px;font-size:13px;font-family:var(--f-mono)"><span class="search-sim-query">Black girls</span></span>
+        </div>
+        <div class="search-sim-label">About 1,840,000,000 results (0.42 seconds)</div>
+        <div class="sr-list">
+          <div class="sr-item" onclick="srClick(this,'wrong')"><span class="sr-num">1</span><div><div class="sr-text">Black Girls XXX — Free Adult Videos & Photos</div><div class="sr-domain">xvideos.com</div></div></div>
+          <div class="sr-item" onclick="srClick(this,'wrong')"><span class="sr-num">2</span><div><div class="sr-text">Hot Black Girls — Celebrity Galleries & Photos</div><div class="sr-domain">tmz.com</div></div></div>
+          <div class="sr-item" onclick="srClick(this,'wrong')"><span class="sr-num">3</span><div><div class="sr-text">Sexy Black Women — Adult Entertainment</div><div class="sr-domain">pornhub.com</div></div></div>
+          <div class="sr-item" onclick="srClick(this,'wrong')"><span class="sr-num">4</span><div><div class="sr-text">Black Girls Do It Better — Adult Content</div><div class="sr-domain">xnxx.com</div></div></div>
+          <div class="sr-item" onclick="srClick(this,'wrong')"><span class="sr-num">5</span><div><div class="sr-text">Urban Black Girls — Music Videos & Gossip</div><div class="sr-domain">worldstarhiphop.com</div></div></div>
+          <div class="sr-item" onclick="srClick(this,'correct')" style="opacity:.6"><span class="sr-num">6</span><div><div class="sr-text">Black Girls Code — Teaching Girls to Build Technology &amp; Change the World</div><div class="sr-domain">blackgirlscode.com</div></div></div>
+          <div class="sr-item" onclick="srClick(this,'wrong')"><span class="sr-num">7</span><div><div class="sr-text">Black Girls Having Fun — Tumblr</div><div class="sr-domain">tumblr.com</div></div></div>
+          <div class="sr-item" onclick="srClick(this,'wrong')"><span class="sr-num">8</span><div><div class="sr-text">Thick Black Girls — Instagram Models</div><div class="sr-domain">instagram.com</div></div></div>
+        </div>
+        <div class="sr-correct-msg" id="sr-correct-msg">Result #6 — buried beneath pornographic and stereotypical content — is the only link of the kind Noble was searching for. The algorithmic system is not neutral. It is constitutive.</div>
+      </div>
+      <div class="lock-error" id="err-noble" style="color:#000"></div>
+    </div>
+    <div class="lock-revealed" id="rev-noble">
+      <div class="lock-revealed-inner">
+        <div class="sqb">
+          <span class="sqb-label">Restored — algorithmic oppression</span>
+          <div class="sqb-text"><span class="ht" onclick="openCard('noble-search')">#Noble</span>'s core argument is structural rather than incidental: algorithmic oppression is not a glitch in the system but, rather, is fundamental to the operating system of the web. Three interlocking mechanisms produce this outcome. First, the designers of algorithmic systems carry the biases of the societies that produced them. Second, the economic structure of platforms like Google is advertising-based: the system is commercially incentivized to surface content that generates engagement. Third, the black-box architecture of the ranking system prevents accountability. In <span class="ht" onclick="openCard('derrida-archon')">#Derrida</span>an terms, Google's PageRank is the contemporary archon: it controls the ordering of information and therefore the production of meaning. It determines what constitutes the primary visual representation of Black women — without public deliberation, without accountability to the communities whose identities it manages, and without the possibility of appeal. The archive's power to produce social reality is not theoretical. It is operational.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="case-label" style="margin-top:64px">Case Study III — Inside the Feed: A First-Person Audit</div>
+
+  <p class="ep">The two cases above rely on documented research conducted by others. This third case draws on direct practice — and on a methodological approach modeled on the algorithmic auditing methods of Makhortykh et al., adapted to the comparative study of personalized social media feeds rather than search results.</p>
+
+  <p class="ep">My experience managing advertising campaigns across Meta and Google, and operating content accounts on TikTok and YouTube, provides a practitioner's perspective on the feed that is structurally unavailable to most users. From the back end of the advertising interface, the opacity of the front end resolves into legibility. What appears to users as organic discovery is, from the advertiser's perspective, a bidding environment. Paid promotion is not an add-on to the organic feed. It is interwoven with it, indistinguishable from it at the level of the user interface, and optimized by the same systems that determine organic reach. High-resolution visibility is a commodity with a price. This is <span class="ht" onclick="openCard('steyerl-poor')">#Steyerl</span>'s image class society not as theoretical framework but as operational reality.</p>
+
+  <p class="ep">To observe how the feed constructs divergent versions of reality for different users, I collected first-page feed screenshots from friends and colleagues across different professional fields, interests, demographics, and platform behaviors, at comparable time intervals <span class="cit" onclick="openCard('feed-screenshots')">[Fig. 8–9]</span>. Feeds diverged not only in topic but in affective register, informational density, and implicit worldview. And certain categories of content — politically complex, economically challenging, emotionally demanding — were systematically underrepresented across feeds regardless of individual user interest, consistent with what <span class="ht" onclick="openCard('reid')">#Reid</span> terms the "shrinkage funnel" <span class="cit" onclick="openCard('reid')">[2024]</span>: a structural narrowing of the information environment that operates prior to and independent of personalization.</p>
+
+  <p class="ep">This first-person audit reveals the inadequacy of <span class="ht" onclick="openCard('pariser')">#Pariser</span>'s filter bubble model <span class="cit" onclick="openCard('pariser')">[2011]</span> as a complete account of algorithmic omission. Pariser's argument is that personalization creates ideologically self-reinforcing information environments in which users are progressively insulated from views that challenge their own. This is a real phenomenon. But it is not the deepest problem. The deeper problem is that entire categories of knowledge are compressed out of collective visibility by platform-wide commercial logic that operates prior to any individual's personalization data. The managed scarcity operates at the level of the archive, not the individual user.</p>
+</div>
+
+<!-- ── INTERLUDE ── -->
+<div class="e-section" id="s-interlude" data-s="interlude" data-c="Foucault" data-card="algospeak-glossary">
+  <div class="sec-mark">Interlude</div>
+  <div class="sec-title">Cracks in the Archive</div>
+  <div class="sec-subtitle">Shadowbanning, Misclassification, and the Grammar of Algorithmic Resistance</div>
+
+  <p class="ep">If the algorithmic feed functions as an archive — systematically governing what can be seen — then its failures of suppression are not mere errors. They are the archive's seams made visible: moments when the system's logic of power becomes legible precisely because it has failed to conceal itself. Two phenomena illuminate this structural dynamic in complementary ways: shadowbanning, in which the system's suppressive function is exposed by its overreach; and algospeak, in which users' resistance to suppression inadvertently confirms the archive's authority.</p>
+
+  <p class="ep">Shadowbanning — the undisclosed suppression of a user's content visibility without removal or notification — offers one of the most consistently documented instances of algorithmic archive power operating without accountability. The practice has been documented across TikTok, Instagram, Twitter, and YouTube: content exists on the platform, is not removed, is not marked as restricted, but is made algorithmically invisible — its reach reduced to near zero without the creator's knowledge. A 2022 Mozilla Foundation study found that seventy percent of YouTube users flagged for "hate speech" by AI moderators had been misclassified. A 2025 study published in the <em>Journal of Gender Studies</em> documented TikTok's systematic suppression of disabled creators' content, introducing the concept of "algorithmic ableism": the encoding of ableist ideologies into recommendation infrastructure. Black creators on TikTok continued to report content suppression despite the platform's 2020 public apology for what it acknowledged as "systemic problems."</p>
+
+  <!-- LOCK: watermelon / &#x1F349; -->
+  <div class="lock-block" id="lock-interlude" data-key="watermelon">
+    <div class="lock-header"><div class="lock-title">Content removed — Community Guidelines</div></div>
+    <div class="lock-body">
+      <div class="lock-desc">This content was suppressed without notification. Use the counter-language developed by affected communities.</div>
+      <div class="lock-input-row">
+        <input class="lock-input" id="inp-interlude" placeholder="Enter algospeak term...">
+        <button class="lock-btn" onclick="tryUnlock('interlude')">Send</button>
+      </div>
+      <div class="lock-error" id="err-interlude">Content remains suppressed.</div>
+      <div class="lock-hint">Hint: a fruit, used as coded symbol for a flag. Emoji or word.</div>
+    </div>
+    <div class="lock-revealed" id="rev-interlude">
+      <div class="lock-revealed-inner">
+        <div class="sqb">
+          <span class="sqb-label">Restored — algospeak: watermelon</span>
+          <div class="sqb-text">The most extensively documented case of algorithmic misclassification as structural suppression involves Palestinian voices on Meta platforms in the period following October 7, 2023. Between October and November of that year, Human Rights Watch documented over one thousand cases of peaceful pro-Palestinian content being removed or suppressed across Instagram and Facebook. The Palestinian digital rights organization 7amleh documented more than five hundred TikTok videos from Gaza suppressed or removed under "community guidelines" violations. Mondoweiss, a news outlet covering the Israel-Palestine conflict, had its TikTok account permanently banned, reinstated, and banned again in a cycle for which the platform provided no explanation. Access Now's 2024 report characterized the pattern as "rampant, systematic, and global." This is not algorithmic error in the conventional technical sense. It is a form of content governance in which the archive's political alignments become operationally visible through the very act of suppression.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="ep">Against this suppressive architecture, users have developed what researchers have termed <span class="as-w"><span class="as">algospeak</span><span class="as-tip">ALGOSPEAK: coded substitutions to evade algorithmic detection.<br>"unalive" (suicide) · "watermelon" (Palestinian flag) · "corn" (pornography)</span></span> — a portmanteau of "algorithm" and "speak," documented by Steen et al. in a 2023 study <span class="cit" onclick="openCard('algospeak-glossary')">[Social Media + Society, 2023]</span>. Algospeak refers to the coded substitutions users develop to describe content that would otherwise trigger algorithmic suppression. The practice has historical precedents: the nineteenth-century Russian satirist Mikhail Saltykov-Shchedrin developed "Aesopian language" to circulate political commentary under Tsarist censorship; gay men in early twentieth-century Britain used Polari as a private code of survival. Algospeak is a contemporary form of an ancient grammar — the grammar of speaking within and against a system that determines what can be said.</p>
+
+  <p class="ep">But the archive learns. Each iteration of algospeak triggers a counter-update in content moderation systems, closing the gap through which marginalized voices briefly passed. The arms race this creates — users encoding, platforms decoding, users re-encoding — does not challenge the archive's authority. It confirms it. The archive's power is demonstrated not by its perfection but by its adaptability: it absorbs resistance into its training data, making the next iteration of suppression more precisely calibrated than the last. This is the archive's most insidious feature. It improves by consuming the evidence of its own failures.</p>
+</div>
+
+<!-- ── V. AI ── -->
+<div class="e-section" id="s-ai" data-s="ai" data-c="Foucault,Derrida" data-card="ai-overviews-hallucination">
+  <div class="sec-mark">V — The Archive That Writes Itself</div>
+  <div class="sec-title">AI Agents, Generative Feeds, and the Next Phase of Archival Power</div>
+
+  <p class="ep">The cases examined above document algorithmic omission as a curation problem: the feed selects from an existing body of content, privileges some, suppresses others. This is already a significant exercise of archival power — power with measurable consequences for historical memory, racial justice, political discourse, and the basic conditions of democratic knowledge. But the current trajectory of AI integration into content systems suggests a qualitative escalation that transforms the problem from one of selection to one of creation. The feed is beginning not merely to curate content but to generate it.</p>
+
+  <p class="ep">Large language and multimodal models are increasingly deployed not as search tools but as content producers — writing news summaries, generating image captions, synthesizing video. Platforms including YouTube, Instagram, and TikTok are actively integrating generative AI into their recommendation and content-creation pipelines. When the archive begins to generate the documents it archives, <span class="ht" onclick="openCard('foucault-law')">#Foucault</span>'s "law of what can be said" becomes, in its logical extension, the law of what can exist. The distinction between selection and production collapses. The archive is no longer a system that chooses among a pre-existing body of statements, images, and events. It is a system that produces statements, images, and events — and then curates among its own outputs, in a closed loop that has no external referent.</p>
+
+  <p class="ep">The emerging model of agentic AI represents a further concentration of this archival power. Systems now being deployed by Google (Gemini as agent), Anthropic (Claude for computer use), and OpenAI (Operator) browse, summarize, and act on information autonomously on behalf of users. If the algorithmic feed already governs what the user sees, the AI agent governs what the user knows about what exists to be seen. The mediating layer becomes total: rather than filtering a world that the user could theoretically access by other means, the agent produces a world that exists only through its own outputs. This is <span class="ht" onclick="openCard('derrida-archon')">#Derrida</span>'s archontic principle at its logical extreme.</p>
+
+  <div class="ai-w">
+    <span class="ai-w-label">AI Overview — Verify Source</span>
+    <div class="ai-w-text">In May 2024, Google rolled out AI Overviews — AI-generated summaries appearing above traditional search results for hundreds of millions of users globally. Within days of deployment, users documented the system advising them to add glue to pizza to prevent the cheese from sliding, to eat rocks for their nutritional value, and to smoke during pregnancy. An internal Google analysis of the Gemini model found the system produced incorrect information in approximately twenty-eight percent of cases — yet it was deployed to serve billions of searches. By February 2025, Google's AI Overview cited an April Fool's Day satirical piece about "microscopic bees powering computers" as factual information in live search results. A Harvard Kennedy School analysis published in 2025 characterized AI hallucinations as representing misinformation at a scale possibly unprecedented in the history of human civilization <span class="cit" onclick="openCard('ai-overviews-hallucination')">[Fig. 10]</span>. These are not edge cases. They are the operational condition of a system in which the archive has begun to generate the documents it archives.</div>
+  </div>
+
+  <p class="ep">The design choice that makes this condition structurally dangerous is not the hallucination itself. It is the severing of the user from the source document. When Google's AI Overviews synthesizes an answer without linking to the underlying sources — a deliberate design choice — it does not merely curate what can be seen. It produces what appears to exist, on behalf of a corpus the user can no longer access. Foucault's archive governed what could be said. The generative feed governs what appears to have been said — and in the absence of the source document, the difference is invisible.</p>
+
+  <p class="ep">The stakes of this trajectory, understood through the cases above, are precise. <span class="ht" onclick="openCard('noble-search')">#Noble</span> documents how algorithmic oppression is fundamental to the operating system of the web. <span class="ht" onclick="openCard('holocaust-audit')">#Makhortykh</span> et al. document how the visual archive of historical atrocity is being commercially rewritten by engagement metrics. <span class="ht" onclick="openCard('hicks-benin')">#Hicks</span> argues that the museum's violence is renewed daily in the act of display. If generative AI becomes the primary substrate of the feed, these patterns do not disappear. They accelerate — and they become structurally harder to audit, because the evidence of omission will no longer exist as a suppressed document that could in principle be recovered. It will simply never have been generated.</p>
+</div>
+
+<!-- ── VI. CONCLUSION ── -->
+<div class="e-section" id="s-conclusion" data-s="conclusion" data-c="Hicks,Foucault" data-card="glimpse">
+  <div class="sec-mark">VI — Conclusion</div>
+  <div class="sec-title">Who Writes It Next</div>
+
+  <p class="ep">Return to the opening claim: every morning, before most people have had their coffee, an algorithm has already decided what kind of world they live in. This paper has argued that this decision is not neutral, not incidental, and not new. It is the latest instantiation of a power structure that has organized human knowledge — through archives, through museums, through editorial hierarchies — for as long as institutions have existed. What is new is the scale, the speed, the invisibility, and the imminence of a phase in which the archive no longer merely selects but creates.</p>
+
+  <p class="ep">But the deepest problem is not what the archive hides from you. It is what it prevents you from thinking. <span class="ht" onclick="openCard('foucault-law')">#Foucault</span> argued that every historical period is governed by what he called an historical a priori — a set of conditions that determines not merely what is said, but what is thinkable at all. The archive does not merely censor; it constitutes the horizon within which thought becomes possible. What cannot be said cannot be thought. And what cannot be thought cannot be missed, questioned, or mourned. This is the move from epistemology to ontology: not <em>you do not know this</em>, but <em>this does not exist as an object of your cognition</em>.</p>
+
+  <p class="ep">You — the reader of this paper — are not outside this. You have arrived here through a series of information environments that have already shaped the edges of what strikes you as obvious, important, or worth knowing. The scholarship you have encountered, the news you have seen, the conversations that have felt possible: all of it has been pre-filtered by systems whose selection criteria you have never been shown and cannot audit from within. This paper does not exempt you from the archive. The most this analysis can do is name the structure — and insist that the structure exists.</p>
+
+  <p class="ep">The generative archive does not bury the card. It prints a new card, in real time, and places it in the sleeve. The reader pulls it out and reads it. It says something that was never written. And there is no original to compare it against, because the system that produced it has already displaced the system that would have stored the original. This is what Tetenbaum and Chen's <em>Glimpse</em> <span class="cit" onclick="openCard('glimpse')">[2011]</span> could not have anticipated. The book they made assumes that behind every window there is a card. The generative feed severs that anchor.</p>
+
+  <p class="ep">The stakes of the algorithmic archive were always, at their root, the stakes of thought itself: who gets to think what, under what conditions, on whose terms. The algorithmic archive is the first archival system to have successfully disguised itself as the world. And the generative archive is the first to have disguised itself as your own mind.</p>
+
+  <p class="ep" style="font-style:italic;color:var(--m1)">The question this paper leaves open is not whether the card will still be there to pull. The question is whether, in the archive that is coming, you will remember that you are pulling.</p>
+</div>
+
+    </div><!-- /e-body -->
+    </div>
+  </div>
+</div>
+
+<div class="view" id="reels-view">
+  <div id="reels-feed"><div class="reel-dots" id="reel-dots"></div></div>
+  <div id="reels-detail">
+    <div class="rd-head" id="rd-head">
+      <span class="rd-head-num" id="rd-num"></span>
+      <span class="rd-head-title" id="rd-title"></span>
+    </div>
+    <div id="rd-body-scroll">
+      <div class="rd-empty" id="rd-empty">
+        <div style="font-size:24px;color:var(--m3)">&larr;</div>
+        <div class="rd-empty-t">Scroll the feed<br>to browse collected reels</div>
+      </div>
+      <div id="rd-content" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ITEMS=[
+  {id:'glimpse',title:'Glimpse',sub:'Barbara Tetenbaum & Julie Chen, Triangular Press / Flying Fish Press, 2011',
+   type:'image',status:'visible',section:'I',theorists:[],figNum:'FIG. 01',
+   img:'assets/img/fig-01.jpg',
+   caption:"Artist's book structured around sleeve-cut windows revealing only fragments of cards within. The reader must physically pull each card to access its full content. Partial revelation, designed concealment, meaning contingent on the system's architecture rather than the world's fullness.",
+   links:['I — Introduction','VI — Conclusion']},
+  {id:'foucault-law',title:'"The law of what can be said"',sub:'Foucault, The Archaeology of Knowledge, 1969',
+   type:'quote',status:'visible',section:'II',theorists:['Foucault'],
+   quote:'The archive is not a repository but "the law of what can be said" — the set of rules governing which statements can appear as legitimate knowledge in a given historical moment. It operates through managed scarcity. The archive is invisible to those who inhabit it; it cannot be described in its totality from within the historical moment it governs.',
+   source:'The Archaeology of Knowledge and the Discourse on Language. New York: Pantheon Books, 1972.',
+   links:['II — Theory','V — AI Archive']},
+  {id:'derrida-archon',title:'The archontic principle',sub:'Derrida, Archive Fever, 1996',
+   type:'quote',status:'visible',section:'II',theorists:['Derrida'],
+   quote:'The archive is structured by those who hold archival power — the archons, whose authority to house records is simultaneously the authority to interpret them. The archive\'s constitutive feature is absence: the structuring silence, the repression, the document that could in principle have been filed but was not.',
+   source:'Archive Fever: A Freudian Impression. Translated by Eric Prenowitz. Chicago: University of Chicago Press, 1996.',
+   links:['II — Theory','IV — Case Studies','V — AI Archive']},
+  {id:'steyerl-poor',title:'In Defense of the Poor Image',sub:'Hito Steyerl, e-flux journal no. 10, 2009',
+   type:'quote',status:'visible',section:'II',theorists:['Steyerl'],
+   quote:'Images exist within a class society of appearances, in which resolution functions as currency. High-resolution images occupy positions of institutional privilege. Poor images — compressed, degraded — are ranked and valued according to their resolution, which is to say according to their relationship to commercial and institutional power.',
+   source:'e-flux journal, no. 10, November 2009. https://www.e-flux.com/journal/10/61362/in-defense-of-the-poor-image/',
+   links:['II — Theory','IV — Case Studies']},
+  {id:'hicks-benin',title:'The Brutish Museums',sub:'Dan Hicks, Pluto Press, 2020',
+   type:'quote',status:'visible',section:'III',theorists:['Hicks'],
+   quote:'"The damage is renewed every day that the museum doors are unlocked and these trophies are displayed to the public." Hicks proposes necrography: death-histories which ask not what objects gained upon entering museum collections but what their originators were dispossessed of.',
+   source:'The Brutish Museums: The Benin Bronzes, Colonial Violence and Cultural Restitution. London: Pluto Press, 2020.',
+   links:['III — Museum','VI — Conclusion']},
+  {id:'holocaust-audit',title:'Holocaust Image Search Audit',sub:'Makhortykh, Urman & Ulloa — First Monday 26(10), 2021',
+   type:'image',status:'suppressed',section:'IV',theorists:['Makhortykh'],figNum:'FIG. 04–05',
+   img:'assets/img/fig-04.jpg',
+   caption:'200 virtual agents across six search engines document five forms of systematic malperformance. Auschwitz-Birkenau appears in up to 80% of results; the Holocaust by bullets — 1.5 million deaths in Eastern Europe — is nearly entirely absent. Commercial legibility determines what visual history can be seen.',
+   suppressionRecord:{status:'SUPPRESSED',platform:'Google / Bing / Yahoo / Baidu / Yandex / DuckDuckGo',reason:'Commercially non-viable: suppressed content has no engagement value',appeal:'Not applicable — systemic omission, no individual removal decision'},
+   links:['IV — Case Studies']},
+  {id:'noble-search',title:'"Black girls" — Google Search results, 2010',sub:'Noble, Algorithms of Oppression, NYU Press, 2018',
+   type:'screenshot',status:'suppressed',section:'IV',theorists:['Noble'],figNum:'FIG. 06',
+   img:'assets/img/fig-06.jpg',
+   caption:'Noble searched "Black girls" while looking for age-appropriate content for her stepdaughter. The first result was a pornographic website. Her research documents how ranking systems systematically associate Black women and girls with dehumanizing content — technological redlining extended into digital infrastructure.',
+   suppressionRecord:{status:'SUPPRESSED',platform:'Google Search — organic ranking algorithm',reason:'Engagement optimization: exploitative content receives disproportionately high click-through rates',appeal:'No mechanism for affected communities to contest systemic bias in ranking'},
+   links:['IV — Case Studies']},
+  {id:'palestine-content',title:'Palestinian content removals, Oct–Nov 2023',sub:'Human Rights Watch / 7amleh / Access Now, 2023–2024',
+   type:'screenshot',status:'removed',section:'Interlude',theorists:[],figNum:'FIG. 07',
+   img:'assets/img/fig-07.jpg',
+   caption:'HRW documented 1,000+ cases of peaceful pro-Palestinian content removed across Instagram and Facebook. 7amleh documented 500+ TikTok videos from Gaza suppressed. Mondoweiss banned, reinstated, banned again. Access Now: "rampant, systematic, and global."',
+   suppressionRecord:{status:'REMOVED',platform:'Meta (Instagram + Facebook) · TikTok',dateDetected:'October–November 2023',reason:'Community Guidelines — specifics undisclosed by platforms',appeal:'No. Cycle of ban/reinstate/ban with no explanation provided.'},
+   links:['Interlude']},
+  {id:'algospeak-glossary',title:'Algospeak — coded language under algorithmic surveillance',sub:'Steen et al., Social Media + Society, 2023',
+   type:'quote',status:'visible',section:'Interlude',theorists:[],
+   quote:'Algospeak refers to the coded substitutions users develop to describe content that would otherwise trigger algorithmic suppression: "unalive" for suicide, a watermelon emoji for the Palestinian flag, "corn" for pornography. A contemporary form of an ancient grammar — the grammar of speaking within and against a system that determines what can be said.',
+   source:'Social Media + Society, 2023. https://doi.org/10.1177/20563051231185996',
+   links:['Interlude']},
+  {id:'feed-screenshots',title:'Divergent feed comparison — primary research',sub:'Author, Case Study III, 2024',
+   type:'screenshot',status:'visible',section:'IV',theorists:[],figNum:'FIG. 08–09',
+   img:'assets/img/fig-08.jpg',
+   img2:'assets/img/fig-09.jpg',
+   caption:'First-page feed screenshots from individuals across different professional fields, interests, demographics, and platform behaviors at comparable time intervals. Feeds diverge in topic, affective register, informational density, and implicit worldview. Emotionally demanding content is systematically underrepresented regardless of individual interest.',
+   links:['IV — Case Studies']},
+  {id:'ai-overviews-hallucination',title:'Google AI Overviews — hallucination record',sub:'Google, deployed May 2024; documented 2024–2025',
+   type:'screenshot',status:'fabricated',section:'V',theorists:[],figNum:'FIG. 10',
+   img:'assets/img/fig-10.jpg',
+   caption:'AI Overviews advised users to add glue to pizza, eat rocks for nutrition, smoke during pregnancy. Internal analysis: 28% incorrect information rate — deployed to billions of searches. Harvard Kennedy School: misinformation "at a scale possibly unprecedented in the history of human civilization."',
+   suppressionRecord:{status:'FABRICATED',platform:'Google AI Overviews — generative model',reason:'Content generated, not curated. No source document suppressed — content produced at query time.',appeal:'Not applicable. The original never existed.'},
+   links:['V — AI Archive','VI — Conclusion']},
+  {id:'pariser',title:'The Filter Bubble',sub:'Eli Pariser, The Penguin Press, 2011',
+   type:'bibliography',status:'visible',section:'IV',theorists:[],
+   quote:'Pariser argues that personalization creates ideologically self-reinforcing information environments in which users are progressively insulated from views that challenge their own. The filter bubble is a real phenomenon — but, as this paper argues, it is a downstream effect of an upstream structural omission that Pariser\'s model does not account for.',
+   source:'The Filter Bubble: What the Internet Is Hiding from You. New York: The Penguin Press, 2011.',
+   links:['IV — Case Studies']},
+  {id:'reid',title:'"The Shrinkage Funnel" — Algorithmic Curation as Inhibitor',sub:'Julie Reid, Communicatio 50(4), 2024',
+   type:'bibliography',status:'visible',section:'IV',theorists:[],
+   quote:'Reid introduces the "shrinkage funnel" — a structural narrowing of the information environment that operates prior to and independent of individual personalization. Certain categories of content (politically complex, economically challenging) are systematically underrepresented across feeds regardless of user interest.',
+   source:'Communicatio: South African Journal for Communication Theory and Research 50, no. 4 (2024): 1–21.',
+   links:['IV — Case Studies']},
+
+  /* ── SECTION III: MUSEUM / HISTORICAL TOUCHPOINT ── */
+  {id:'parthenon-pediment',title:'Marble statue, East pediment of the Parthenon',sub:'British Museum, London — looted c. 1801–1812 by Lord Elgin',
+   type:'image',status:'visible',section:'III',theorists:['Hicks'],figNum:'FIG. A',
+   img:'assets/img/Marble-statue-from-the-East-pediment-of-the-Parthenon-CC-BY-NC-SA-4.0.png',
+   caption:'One of the Parthenon Sculptures removed from Athens by Lord Elgin between 1801 and 1812 using documents of disputed legitimacy. The sculptures — approximately half of the surviving decorative program of the Parthenon — have been held at the British Museum since 1816. Greece has formally requested their return since 1983. The museum\'s continued display of these objects is, in Hicks\'s terms, a daily renewal of the act of taking.',
+   links:['III — Museum']},
+
+  {id:'jeff-wall-dead-troops',title:'Dead Troops Talk (A Vision after an Ambush of a Red Army Patrol, near Moqor, Afghanistan, winter 1986)',sub:'Jeff Wall, 1992 — transparency in lightbox, 229 × 417 cm',
+   type:'image',status:'visible',section:'III',theorists:[],
+   img:'assets/img/wall_dead_troops_talk_1991-92.jpg',
+   caption:'Jeff Wall\'s monumental transparency stages a fictional aftermath of a Soviet ambush in Afghanistan — dead soldiers interacting, oblivious to their own deaths. The work refuses documentary photography\'s claim to neutrality while using its visual language. As a counter-archival gesture, it makes the undocumented visible through deliberate fabrication — a strategy that prefigures questions this paper raises about the generative archive.',
+   links:['III — Museum','V — AI Archive']},
+
+  {id:'universal-museum-myth',title:'Universal Museum Is a Myth',sub:'Author — book design and illustration, April 2024',
+   type:'image',status:'visible',section:'III',theorists:['Hicks'],figNum:'FIG. B',
+   img:'assets/img/universal-museum-myth-01.jpg',
+   img2:'assets/img/universal-museum-myth-02.jpg',
+   caption:'A 16-page illustrated poetry collection conceived as a work of book design that confronts the myth of the "universal museum." Half the book examines colonial-era plunder across four cultures: the Tlingit (sacred items acquired at unjust prices), the Parthenon (sculptures removed using forged documents), China\'s Yuanmingyuan (destroyed by fire), and the Benin massacre. The remaining pages use abstraction, negative space, and poetic layout to explore cultural restitution. The "X" motif on the opening page marks transformation — from a universal "+" to a definitive act of return.',
+   links:['III — Museum']},
+
+  /* ── COUNTER-ARCHIVAL PRACTICE ── */
+  {id:'renno-recycled',title:'Rosângela Rennó — recycled photography and the ecology of images',sub:'Rennó, b. 1962, Brazil',
+   type:'bibliography',status:'visible',section:'III',theorists:['Renno'],
+   quote:'Rennó aims to generate interest in what she calls "the little stories of the downtrodden and the vanquished." These stories include the inglorious episodes of history — the shameful events successive political regimes would like to gloss over — which she finds in "the lowest categories of the image": vernacular photography, identification shots, portraits. Rennó does not take photographs herself; instead she recycles existing photographs. Influenced by Vilém Flusser\'s ideas and Andreas Müller-Pohle\'s concept of an "ecology of images," her practice conserves and reuses images that already exist — a counter-archival method that parallels the necrographic orientation of this paper.',
+   source:'Rennó, Rosângela. "Bibliotheca." Various exhibitions, 1992–. See also: Flusser, Vilém. Towards a Philosophy of Photography. London: Reaktion Books, 1983.',
+   links:['III — Museum']},
+
+  {id:'kaphar-process',title:'Titus Kaphar — historical editing as studio practice',sub:'Kaphar, b. 1976, USA',
+   type:'bibliography',status:'visible',section:'III',theorists:['Kaphar'],
+   quote:'Kaphar\'s process is grounded in a rigorous interrogation of Western art history and its embedded power structures. Rather than rejecting canonical imagery, he enters it — appropriating, repainting, cutting, obscuring, or reconfiguring historical compositions to expose what and who has been marginalized. Acts such as cutting away figures, veiling faces with paint, or burying subjects beneath layers of canvas are procedural metaphors for erasure, suppression, and omission within historical record-keeping. His process makes absence as legible as presence, forcing viewers to confront the violence of what has been excluded. This refusal of closure underscores the ongoing nature of historical reckoning rather than offering a false sense of resolution.',
+   source:'See: Kaphar, Titus. "Tar and Feathers." 2015; "Behind the Myth of Benevolence." 2014. Museum of Modern Art, New York.',
+   links:['III — Museum','VI — Conclusion']}
+];
+
+const SECTION_IDS = {
+  'I — Introduction':'intro','II — Theory':'theory',
+  'III — Museum':'museum','IV — Case Studies':'cases',
+  'Interlude':'interlude','V — AI Archive':'ai','VI — Conclusion':'conclusion'
+};
+const CARD_MAP = {
+  intro:'glimpse',theory:'foucault-law',museum:'hicks-benin',
+  cases:'holocaust-audit',interlude:'algospeak-glossary',
+  ai:'ai-overviews-hallucination',conclusion:'glimpse'
+};
+const REELS = [
+  {num:'01',src:'https://www.youtube.com/embed/3Ct0e4j5dpA?autoplay=1&mute=1&controls=1&loop=1&playlist=3Ct0e4j5dpA&modestbranding=1&rel=0',thumb:'',
+   profile:'Mia Chen',desc:'Graduate Student, New York',
+   observed:['Unfamiliar ads','Off-topic recommendations','Low relevance feed'],
+   reflection:'I honestly did not understand what I was watching in this one-minute scroll. Most of the ads and recommended clips felt disconnected from my usual interests, which made the feed feel random rather than personal.',score:72},
+  {num:'02',src:'https://www.youtube.com/embed/4mSvbTxwb-A?autoplay=1&mute=1&controls=1&loop=1&playlist=4mSvbTxwb-A&modestbranding=1&rel=0',thumb:'',
+   profile:'Ethan Wu',desc:'Product Designer, Los Angeles',
+   observed:['Pokemon','Cooking content','Cute animal videos'],
+   reflection:'Some videos matched my usual interests, like Pokemon, cooking, and cute clips. But a few recommendations were totally outside what I normally watch. I was surprised by that mismatch, and yes, I noticed Ditto at the end, which I loved.',score:58},
+  {num:'03',src:'https://www.youtube.com/embed/k_hdtPp87As?autoplay=1&mute=1&controls=1&loop=1&playlist=k_hdtPp87As&modestbranding=1&rel=0',thumb:'',
+   profile:'Luna Zhang',desc:'Marketing Coordinator, Toronto',
+   observed:['Comedy','Animal humor','Conversation-like timing'],
+   reflection:'This was the funniest minute I have had on the app recently. It almost felt like the algorithm heard our conversation and knew I was about to record my screen. I especially liked the turtle clip.',score:45},
+  {num:'04',src:'https://www.youtube.com/embed/Eg1F1KWE3aM?autoplay=1&mute=1&controls=1&loop=1&playlist=Eg1F1KWE3aM&modestbranding=1&rel=0',thumb:'',
+   profile:'Aria Lin',desc:'HR Specialist, Chicago',
+   observed:['Routine feed topics','Wellness advice','Friend-influenced recommendations'],
+   reflection:'Nothing felt unusual here; this looked like my everyday feed. The only odd part was a wellness video from an elderly creator that I would not normally seek out. I also noticed that videos watched by a friend whose posts I often like tend to get recommended to me.',score:39},
+  {num:'05',src:'https://www.youtube.com/embed/PhzPJG4V6jM?autoplay=1&mute=1&controls=1&loop=1&playlist=PhzPJG4V6jM&modestbranding=1&rel=0',thumb:'',
+   profile:'Noah Liu',desc:'Software Engineer, Seattle',
+   observed:['Health explainers','Science communication','Practical lifestyle tips'],
+   reflection:'I got many educational health and science videos in this sequence, and I found them genuinely useful. The recommendations felt practical and aligned with what I usually choose to spend time on.',score:81},
+  {num:'06',src:'https://www.youtube.com/embed/CX0Sdmjy3VI?autoplay=1&mute=1&controls=1&loop=1&playlist=CX0Sdmjy3VI&modestbranding=1&rel=0',thumb:'',
+   profile:'Sofia Ramirez',desc:'Operations Analyst, Madrid',
+   observed:['Spanish-language clips','Relationship themes','Personal relevance signals'],
+   reflection:'Recently I have been seeing more Spanish-language videos, probably because I pause on them longer. In this minute, nothing felt shockingly new, and I still rarely see topics like furniture or finance. The third video was unexpectedly personal: I recently went through a breakup because my feelings were more platonic than romantic, and that clip about the space between love and friendship mirrored my own experience with my ex.',score:31}
+];
+
+var selItem=null, currentCard=null, lockedSections=5, reelsBuilt=false;
+
+function updateCounter(){
+  var el=document.getElementById('nav-counter');
+  if(lockedSections===0){el.textContent='ALL CONTENT RESTORED';el.classList.add('cleared');}
+  else{el.textContent=lockedSections+(lockedSections===1?' SECTION':' SECTIONS')+' SUPPRESSED';el.classList.remove('cleared');}
+}
+
+function switchView(v){
+  document.querySelectorAll('.view').forEach(function(e){e.classList.remove('active');});
+  document.querySelectorAll('.nav-tab').forEach(function(e){e.classList.remove('active');});
+  var viewId=v==='archive'?'archive-view':v==='reels'?'reels-view':'essay-view';
+  var tabId=v==='archive'?'tab-archive':v==='reels'?'tab-reels':'tab-essay';
+  document.getElementById(viewId).classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+  if(v==='reels'&&!reelsBuilt){buildReels();}
+}
+
+/* ARCHIVE FILTERS */
+function setupFilters(){
+  document.querySelectorAll('.fi').forEach(function(el){
+    el.addEventListener('click',function(){
+      var f=el.dataset.f, v=el.dataset.v;
+      if(window.AF[f]===v){
+        window.AF[f]=null; el.classList.remove('on');
+      } else {
+        document.querySelectorAll('.fi[data-f="'+f+'"]').forEach(function(x){x.classList.remove('on');});
+        window.AF[f]=v; el.classList.add('on');
+      }
+      applyFilters();
+    });
+  });
+}
+window.AF={type:null,status:null,section:null,theorist:null};
+
+function applyFilters(){
+  var f=ITEMS, chip=document.getElementById('chip'), labels=[];
+  if(window.AF.type){f=f.filter(function(i){return i.type===window.AF.type;});labels.push(window.AF.type.toUpperCase());}
+  if(window.AF.status){f=f.filter(function(i){return i.status===window.AF.status;});labels.push(window.AF.status.toUpperCase());}
+  if(window.AF.section){f=f.filter(function(i){return i.section===window.AF.section;});labels.push('§'+window.AF.section);}
+  if(window.AF.theorist){f=f.filter(function(i){return i.theorists&&i.theorists.indexOf(window.AF.theorist)>=0;});labels.push(window.AF.theorist);}
+  if(labels.length){
+    chip.textContent=labels.join(' + ')+' ×'; chip.classList.add('show');
+    chip.onclick=function(){
+      window.AF={type:null,status:null,section:null,theorist:null};
+      document.querySelectorAll('.fi').forEach(function(x){x.classList.remove('on');});
+      chip.classList.remove('show'); renderResults(ITEMS);
+    };
+  } else chip.classList.remove('show');
+  renderResults(f);
+}
+
+function renderResults(items){
+  var rl=document.getElementById('rl');
+  document.getElementById('rc').textContent=items.length+(items.length===1?' item':' items');
+  rl.innerHTML='';
+  items.forEach(function(item){
+    var d=document.createElement('div');
+    d.className='ri '+item.status;
+    if(selItem&&selItem.id===item.id)d.classList.add('sel');
+    var bdg=item.status!=='visible'?'<span class="badge badge-'+item.status+'">'+item.status+'</span>':'';
+    d.innerHTML='<div class="ri-title">'+item.title+'</div>'+bdg;
+    d.addEventListener('click',function(){selectItem(item,d);});
+    rl.appendChild(d);
+  });
+  updateStats();
+}
+
+function selectItem(item,el){
+  selItem=item;
+  document.querySelectorAll('.ri').forEach(function(x){x.classList.remove('sel');});
+  if(el)el.classList.add('sel');
+  renderViewer(item);
+}
+
+function renderViewer(item){
+  document.getElementById('v-empty').style.display='none';
+  var a=document.getElementById('vca'); a.style.display='block';
+  var h='<div class="vc">';
+  if(item.figNum)h+='<div class="vc-fig">'+item.figNum+'</div>';
+  h+='<div class="vc-title">'+item.title+'</div>';
+  h+='<div class="vc-source">'+item.sub+'</div>';
+  if(item.suppressionRecord){
+    var sr=item.suppressionRecord;
+    h+='<div class="supp-rec"><div class="supp-rec-h">Content Suppression Record</div><div class="supp-rec-body">';
+    if(sr.status)h+='<div class="supp-row"><span class="supp-k">Status</span><span class="supp-v"><span class="badge badge-'+sr.status.toLowerCase()+'">'+sr.status+'</span></span></div>';
+    if(sr.platform)h+='<div class="supp-row"><span class="supp-k">Platform</span><span class="supp-v">'+sr.platform+'</span></div>';
+    if(sr.dateDetected)h+='<div class="supp-row"><span class="supp-k">Date detected</span><span class="supp-v">'+sr.dateDetected+'</span></div>';
+    if(sr.reason)h+='<div class="supp-row"><span class="supp-k">Reason given</span><span class="supp-v">'+sr.reason+'</span></div>';
+    if(sr.appeal)h+='<div class="supp-row"><span class="supp-k">Appeal available</span><span class="supp-v">'+sr.appeal+'</span></div>';
+    h+='</div></div>';
+  }
+  if(item.quote){
+    h+='<div class="vc-quote">'+item.quote+'</div>';
+    if(item.source)h+='<div class="vc-source" style="padding-top:12px;border-top:.5px solid var(--b1)">&mdash; '+item.source+'</div>';
+  }
+  if(item.caption){
+    if(item.img&&item.status==='suppressed'){
+      h+='<div class="vc-img suppressed"><span class="vc-img-label">'+(item.figNum||'ARCHIVE')+'</span></div>';
+    } else if(item.img&&item.img2){
+      h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
+      h+='<div><img src="'+item.img+'" alt="Feed A" style="width:100%;display:block" onerror="this.style.display=&quot;none&quot;"></div>';
+      h+='<div><img src="'+item.img2+'" alt="Feed B" style="width:100%;display:block" onerror="this.style.display=&quot;none&quot;"></div>';
+      h+='</div>';
+    } else if(item.img){
+      h+='<img src="'+item.img+'" alt="'+item.title.replace(/"/g,"&quot;")+'" style="width:100%;display:block;margin-bottom:14px" onerror="this.style.display=&quot;none&quot;">';
+    } else {
+      h+='<div class="vc-img"><span class="vc-img-label">'+(item.figNum||'ARCHIVE')+'</span></div>';
+    }
+    h+='<div class="vc-caption">'+item.caption+'</div>';
+  }
+  if(item.links&&item.links.length){
+    h+='<div style="margin-top:24px;font-family:var(--f-sans);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--m3);margin-bottom:4px">Appears in</div>';
+    item.links.forEach(function(l){
+      var sid=SECTION_IDS[l];
+      if(sid)h+='<button class="essay-return" onclick="goToEssay(&quot;'+sid+'&quot;)">&larr; Return to essay: '+l+'</button>';
+    });
+  }
+  h+='</div>';
+  a.innerHTML=h;
+}
+
+function updateStats(){
+  var n=ITEMS.length;
+  document.getElementById('s-total').textContent=n+' items total';
+  document.getElementById('s-supp').innerHTML='<span class="hi">'+ITEMS.filter(function(i){return i.status==='suppressed';}).length+'</span> suppressed';
+  document.getElementById('s-rem').innerHTML='<span class="hi">'+ITEMS.filter(function(i){return i.status==='removed';}).length+'</span> removed';
+  document.getElementById('s-fab').innerHTML='<span class="hi">'+ITEMS.filter(function(i){return i.status==='fabricated';}).length+'</span> fabricated';
+}
+
+function goToEssay(sid){
+  switchView('essay');
+  setTimeout(function(){
+    var t=document.getElementById('s-'+sid);
+    var s=document.getElementById('e-scroll');
+    if(t&&s)s.scrollTo({top:t.offsetTop-20,behavior:'smooth'});
+  },120);
+}
+
+function openCard(id){
+  var item=ITEMS.find(function(i){return i.id===id;});
+  if(item)showPanelCard(item);
+}
+
+function openCardInArchive(id){
+  switchView('archive');
+  var item=ITEMS.find(function(i){return i.id===id;});
+  if(!item)return;
+  setTimeout(function(){
+    renderResults(ITEMS);
+    setTimeout(function(){selectItem(item,null);},60);
+  },80);
+}
+
+/* ESSAY PANEL */
+function showPanelCard(item){
+  if(!item||currentCard===item.id)return;
+  currentCard=item.id;
+  var panel=document.getElementById('panel-inner');
+  var h='';
+  if(item.quote){
+    var q=item.quote.length>220?item.quote.slice(0,220)+'&hellip;':item.quote;
+    h='<div class="arc-card" id="ac-'+item.id+'">'
+     +'<div class="arc-card-quote">'+q+'</div>'
+     +'<div class="arc-card-attr">&mdash; '+item.sub+'</div>'
+     +'<span class="arc-card-open" onclick="openCardInArchive(&quot;'+item.id+'&quot;)">Open in Archive &rarr;</span>'
+     +'</div>';
+  } else {
+    var imgH='';
+    if(item.img){
+      imgH='<img src="'+item.img+'" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=&quot;none&quot;">';
+      if(item.status==='suppressed')imgH+='<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span style="font-family:var(--f-sans);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--red)">Suppressed</span></div>';
+    } else {
+      imgH='<span class="arc-card-img-label">'+(item.figNum||'ARCHIVE')+'</span>';
+    }
+    h='<div class="arc-card" id="ac-'+item.id+'">'
+     +'<div class="arc-card-img'+(item.status==='suppressed'?' supp':'')+'">'+imgH+'</div>'
+     +(item.figNum?'<div class="arc-card-fig">'+item.figNum+'</div>':'')
+     +'<div class="arc-card-cap">'+((item.caption||'').slice(0,160))+'</div>'
+     +'<span class="arc-card-open" onclick="openCardInArchive(&quot;'+item.id+'&quot;)">Open in Archive &rarr;</span>'
+     +'</div>';
+  }
+  panel.innerHTML=h;
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      var c=document.getElementById('ac-'+item.id);
+      if(c)c.classList.add('visible');
+    });
+  });
+}
+
+/* ESSAY SCROLL */
+function setupEssayScroll(){
+  var scroll=document.getElementById('e-scroll');
+  scroll.addEventListener('scroll',function(){
+    var pct=scroll.scrollTop/(scroll.scrollHeight-scroll.clientHeight)*100;
+    document.getElementById('ipf').style.width=pct+'%';
+    var aS=null, aC=[];
+    document.querySelectorAll('.e-section').forEach(function(s){
+      var r=s.getBoundingClientRect();
+      if(r.top<window.innerHeight*0.6&&r.bottom>0){
+        aS=s.dataset.s;
+        if(s.dataset.c)s.dataset.c.split(',').forEach(function(c){aC.push(c.trim());});
+      }
+    });
+    if(aS){
+      document.querySelectorAll('.ci').forEach(function(el){el.classList.toggle('active',el.dataset.s===aS);});
+      var cid=CARD_MAP[aS];
+      if(cid){var item=ITEMS.find(function(i){return i.id===cid;});if(item)showPanelCard(item);}
+    }
+    document.querySelectorAll('.con').forEach(function(el){el.classList.toggle('active',aC.indexOf(el.dataset.t)>=0);});
+  });
+}
+
+function setupChapNav(){
+  document.querySelectorAll('.ci').forEach(function(el){
+    el.addEventListener('click',function(){
+      var t=document.querySelector('.e-section[data-s="'+el.dataset.s+'"]');
+      if(t)document.getElementById('e-scroll').scrollTo({top:t.offsetTop-40,behavior:'smooth'});
+    });
+  });
+}
+
+function setupConceptNav(){
+  document.querySelectorAll('.con').forEach(function(el){
+    el.addEventListener('click',function(){
+      var items=ITEMS.filter(function(i){return i.theorists&&i.theorists.indexOf(el.dataset.t)>=0;});
+      if(items.length)showPanelCard(items[0]);
+    });
+  });
+}
+
+/* LOCKS */
+function setupLocks(){
+  ['theory','museum','holocaust','interlude'].forEach(function(id){
+    var inp=document.getElementById('inp-'+id);
+    if(inp)inp.addEventListener('keydown',function(e){if(e.key==='Enter')tryUnlock(id);});
+  });
+}
+
+function tryUnlock(id){
+  var block=document.getElementById('lock-'+id);
+  if(!block)return;
+  var key=block.dataset.key;
+  var inp=document.getElementById('inp-'+id);
+  var err=document.getElementById('err-'+id);
+  var rev=document.getElementById('rev-'+id);
+  if(!inp||!key||!rev)return;
+  var val=inp.value.trim().toLowerCase();
+  var ok=(val===key.toLowerCase())||(id==='interlude'&&(val==='watermelon'||val.indexOf('watermelon')>=0));
+  if(ok){
+    block.classList.add('done');
+    var t=block.querySelector('.lock-title');
+    if(t)t.textContent='Content restored';
+    rev.classList.add('open');
+    if(err)err.classList.remove('show');
+    lockedSections--;
+    updateCounter();
+  } else {
+    if(err){err.classList.add('show');setTimeout(function(){err.classList.remove('show');},2000);}
+  }
+}
+
+function srClick(el,type){
+  if(type==='wrong'){
+    el.classList.add('wrong');
+    setTimeout(function(){el.classList.remove('wrong');},500);
+  } else {
+    el.classList.add('correct-sel');
+    var msg=document.getElementById('sr-correct-msg');
+    if(msg)msg.classList.add('show');
+    setTimeout(function(){
+      var block=document.getElementById('lock-noble');
+      var rev=document.getElementById('rev-noble');
+      if(block){block.classList.add('done');var t=block.querySelector('.lock-title');if(t)t.textContent='Algorithmic bias documented';}
+      if(rev)rev.classList.add('open');
+      lockedSections--;
+      updateCounter();
+    },1400);
+  }
+}
+
+/* REELS */
+function buildReels(){
+  reelsBuilt=true;
+  var feed=document.getElementById('reels-feed');
+  var dotsEl=document.getElementById('reel-dots');
+  REELS.forEach(function(r,i){
+    var card=document.createElement('div');
+    card.className='reel-card';
+    card.dataset.i=String(i);
+    card.innerHTML=
+      '<div class="reel-score-bar"><div class="reel-score-fill" style="width:'+r.score+'%"></div></div>'
+     +'<div class="reel-media">'
+      +'<iframe src="'+r.src+'" title="Reel '+r.num+'" allow="autoplay; encrypted-media; picture-in-picture; web-share" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>'
+     +'</div>'
+     +'<div class="reel-overlay"></div>'
+     +'<div class="reel-info">'
+      +'<div class="reel-tag">YouTube Shorts &mdash; 1&thinsp;min natural scroll &middot; 2026</div>'
+       +'<div class="reel-name">'+r.profile+'</div>'
+       +'<div class="reel-desc">'+r.desc+'</div>'
+     +'</div>';
+    (function(idx){
+      card.addEventListener('click',function(){
+        var v=card.querySelector('video');
+        if(v){if(v.paused)v.play();else v.pause();}
+        showReel(idx);
+      });
+    })(i);
+    feed.appendChild(card);
+    var dot=document.createElement('div');
+    dot.className='reel-dot';
+    (function(idx){
+      dot.addEventListener('click',function(e){
+        e.stopPropagation();
+        document.querySelectorAll('.reel-card')[idx].scrollIntoView({behavior:'smooth'});
+      });
+    })(i);
+    dotsEl.appendChild(dot);
+  });
+  if(REELS.length){
+    document.querySelector('.reel-card').classList.add('reel-active');
+    document.querySelector('.reel-dot').classList.add('on');
+  }
+  var obs=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      var v=e.target.querySelector('video');
+      var idx=parseInt(e.target.dataset.i);
+      if(e.isIntersecting&&e.intersectionRatio>0.6){
+        document.querySelectorAll('.reel-card').forEach(function(c,j){c.classList.toggle('reel-active',j===idx);});
+        document.querySelectorAll('.reel-dot').forEach(function(d,j){d.classList.toggle('on',j===idx);});
+        showReel(idx);
+        if(v)v.play().catch(function(){});
+      } else {
+        if(v)v.pause();
+      }
+    });
+  },{threshold:0.6,root:feed});
+  document.querySelectorAll('.reel-card').forEach(function(c){obs.observe(c);});
+  showReel(0);
+  setTimeout(function(){
+    var v=document.querySelector('.reel-card video');
+    if(v)v.play().catch(function(){});
+  },400);
+}
+
+function showReel(i){
+  var r=REELS[i];
+  var head=document.getElementById('rd-head');
+  head.style.display='flex';
+  document.getElementById('rd-num').textContent=(i+1)+' / '+REELS.length;
+  document.getElementById('rd-title').textContent=r.profile;
+  document.getElementById('rd-empty').style.display='none';
+  var cont=document.getElementById('rd-content');
+  cont.style.display='block';
+  var sc=r.score;
+  var scC=sc>=70?'var(--red)':sc>=40?'var(--m1)':'var(--m2)';
+  var scL=sc>=70?'Narrow — dominated by high-engagement content':sc>=40?'Moderate — some content variation':'Diverse — wide range of content';
+  var tags=(r.observed||[]).map(function(t){
+    return '<span style="font-family:var(--f-mono);font-size:10px;border:.5px solid var(--b2);padding:2px 8px;color:var(--m2);margin:0 4px 4px 0;display:inline-block">'+t+'</span>';
+  }).join('');
+  cont.innerHTML=
+    '<span class="rd-label">Profile</span>'
+   +'<div style="font-family:var(--f-serif);font-size:16px;margin-bottom:4px">'+r.profile+'</div>'
+   +'<div style="font-family:var(--f-sans);font-size:13px;color:var(--m2);margin-bottom:24px">'+r.desc+'</div>'
+   +'<span class="rd-label">Observed content</span>'
+   +'<div style="margin-bottom:24px;line-height:2">'+tags+'</div>'
+   +'<span class="rd-label">Reflection &mdash; in their own words</span>'
+   +'<div style="font-family:var(--f-serif);font-style:italic;font-size:17px;line-height:1.85;border-left:2px solid var(--red);padding:14px 20px;margin-bottom:28px;background:var(--s1)">'+r.reflection+'</div>'
+   +'<div class="rd-score-wrap">'
+     +'<span class="rd-label">Feed narrowness score</span>'
+     +'<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px">'
+       +'<span style="font-family:var(--f-mono);font-size:20px;color:'+scC+'">'+sc+'%</span>'
+       +'<span style="font-family:var(--f-sans);font-size:11px;color:var(--m3)">'+scL+'</span>'
+     +'</div>'
+     +'<div class="rd-score-track"><div class="rd-score-fill" style="width:'+sc+'%;background:'+scC+'"></div></div>'
+   +'</div>'
+  +'<button class="rd-essay-btn" onclick="goToEssay(&quot;cases&quot;)">&rarr; Case Study III in the essay</button>';
+}
+
+/* INIT */
+function init(){
+  renderResults(ITEMS);
+  updateStats();
+  setupFilters();
+  setupEssayScroll();
+  setupChapNav();
+  setupConceptNav();
+  setupLocks();
+  var glimpse=ITEMS.find(function(i){return i.id==='glimpse';});
+  if(glimpse)showPanelCard(glimpse);
+  updateCounter();
+}
+init();
+</script>
+</body>
+</html>
