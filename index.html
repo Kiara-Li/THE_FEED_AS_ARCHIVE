@@ -28,8 +28,18 @@ nav{position:fixed;top:0;left:0;right:0;height:var(--nav);display:flex;align-ite
 .nav-tab{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:0 18px;height:var(--nav);display:flex;align-items:center;cursor:pointer;color:var(--m2);border:none;background:none;border-bottom:2px solid transparent}
 .nav-tab:hover{color:var(--m1)}
 .nav-tab.active{color:var(--tx);border-bottom-color:var(--red)}
-#nav-counter{background:var(--red);color:#000;padding:0 20px;height:var(--nav);display:flex;align-items:center;font-family:var(--f-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;white-space:nowrap}
+#nav-counter{background:var(--red);color:#000;padding:0 20px;height:var(--nav);display:flex;align-items:center;font-family:var(--f-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;white-space:nowrap;border:none;cursor:pointer}
+#nav-counter:hover{filter:brightness(.95)}
 #nav-counter.cleared{background:var(--s2);color:var(--m2)}
+#hint-panel{position:fixed;top:var(--nav);right:0;width:380px;max-width:calc(100vw - 24px);max-height:calc(100vh - var(--nav) - 16px);overflow:auto;background:var(--s1);border-left:.5px solid var(--b1);border-bottom:.5px solid var(--b1);display:none;z-index:250;padding:14px 16px 16px}
+#hint-panel.open{display:block}
+.hint-head{font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--red);margin-bottom:10px}
+.hint-sub{font-family:var(--f-sans);font-size:12px;color:var(--m2);line-height:1.6;margin-bottom:12px}
+.hint-item{border:.5px solid var(--b1);padding:10px 12px;background:var(--bg);margin-bottom:8px}
+.hint-k{font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--m1);margin-bottom:6px}
+.hint-v{font-family:var(--f-sans);font-size:12px;color:var(--m2);line-height:1.6}
+.hint-item.done{border-color:var(--redbr);background:var(--redbg)}
+.hint-item.done .hint-k{color:var(--red)}
 /* VIEWS */
 .view{position:fixed;top:var(--nav);left:0;right:0;bottom:0;display:none}
 .view.active{display:flex}
@@ -81,6 +91,8 @@ nav{position:fixed;top:0;left:0;right:0;height:var(--nav);display:flex;align-ite
 .vc-img{width:100%;aspect-ratio:16/9;background:var(--s2);border:.5px solid var(--b1);display:flex;align-items:center;justify-content:center;margin-bottom:14px;position:relative;overflow:hidden}
 .vc-img.suppressed{opacity:.15}
 .vc-img-label{font-family:var(--f-mono);font-size:11px;color:var(--m3)}
+.vc img{filter:brightness(.82) contrast(.96)}
+.vc img.suppressed{opacity:.45;filter:brightness(.62) contrast(.9)}
 .supp-rec{border:.5px solid var(--red);margin-bottom:32px}
 .supp-rec-h{background:var(--redbg);padding:10px 16px;border-bottom:.5px solid var(--redbr);font-family:var(--f-sans);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--red)}
 .supp-rec-body{padding:12px 16px;display:flex;flex-direction:column;gap:6px}
@@ -117,7 +129,9 @@ nav{position:fixed;top:0;left:0;right:0;height:var(--nav);display:flex;align-ite
 .arc-card-img{width:100%;aspect-ratio:4/3;background:var(--s2);display:flex;align-items:center;justify-content:center;border-bottom:.5px solid var(--b0);overflow:hidden;position:relative}
 .arc-card-img.supp{opacity:.15}
 .arc-card-img img{width:100%;height:100%;object-fit:cover}
+.arc-card-img img{filter:brightness(.78) contrast(.95)}
 .arc-card-img-label{font-family:var(--f-mono);font-size:10px;color:var(--m3)}
+.card-anchor{display:block;height:0;position:relative;top:-120px}
 .arc-card-fig{font-family:var(--f-sans);font-size:10px;letter-spacing:.04em;color:var(--red);text-transform:uppercase;padding:10px 14px 4px}
 .arc-card-cap{padding:4px 14px 14px;font-family:var(--f-sans);font-size:12px;line-height:1.6;color:var(--m1)}
 .arc-card-quote{padding:20px 18px;font-family:var(--f-serif);font-style:italic;font-size:14px;line-height:1.75;border-left:2px solid var(--red);margin:16px}
@@ -228,8 +242,13 @@ nav{position:fixed;top:0;left:0;right:0;height:var(--nav);display:flex;align-ite
     <button class="nav-tab active" id="tab-essay" onclick="switchView('essay')">Essay</button>
     <button class="nav-tab" id="tab-reels" onclick="switchView('reels')">Reels</button>
   </div>
-  <span id="nav-counter">5 SECTIONS SUPPRESSED</span>
+  <button id="nav-counter" type="button" aria-expanded="false">ARCHIVE KEYS HINTS</button>
 </nav>
+<div id="hint-panel" aria-hidden="true">
+  <div class="hint-head">Archive Restoration Guide</div>
+  <div class="hint-sub">This paper stages omission as method. Click any locked block below to restore suppressed content using these keys.</div>
+  <div id="hint-list"></div>
+</div>
 
 <div class="view" id="archive-view">
   <div id="arc-filter">
@@ -382,6 +401,7 @@ nav{position:fixed;top:0;left:0;right:0;height:var(--nav);display:flex;align-ite
 
   <p class="ep">The argument that information systems exercise archival power through selection and omission is not new. It predates the algorithm by centuries. The history of the museum offers the most clarifying precedent — clarifying because it is close enough to be legible and distant enough to be visible as history rather than as the given conditions of knowledge.</p>
 
+  <span class="card-anchor" data-card="hicks-benin"></span>
   <p class="ep">In February 1897, a British military expedition entered the Kingdom of Benin in what is today southern Nigeria, burned its capital, deposed its Oba, and looted approximately three thousand objects — bronze plaques, ivory carvings, royal regalia — from the royal palace and its precincts. These objects were dispersed across hundreds of Western museums and private collections, where the majority of them remain. <span class="ht" onclick="openCard('hicks-benin')">#Hicks</span>, in <em>The Brutish Museums</em> <span class="cit" onclick="openCard('hicks-benin')">[2020]</span>, argues that this dispersal is not a historical event that concluded in 1897. It is an ongoing one. Every day that the museum doors are unlocked and these trophies are displayed to the public, the damage is renewed. The museum's curatorial apparatus — what to display, in what frame, with what interpretive narrative — actively rewrites history rather than preserving it. Looted objects are recast as "universal heritage," as "artistic masterpieces," as "anthropological documents." The act of taking, and the sovereignty of those from whom objects were taken, are structurally omitted from exhibition discourse. The archive does not record their absence. The archive is their absence.</p>
 
   <!-- LOCK: "necrography" -->
@@ -406,12 +426,17 @@ nav{position:fixed;top:0;left:0;right:0;height:var(--nav);display:flex;align-ite
     </div>
   </div>
 
+  <span class="card-anchor" data-card="parthenon-pediment"></span>
   <p class="ep">The structural parallel between museum and feed is not merely analogical; it is constitutive. Consider the Elgin Marbles — sculptures from the East pediment of the Parthenon, removed from Athens between 1801 and 1812 under documents of disputed legitimacy, and displayed at the British Museum ever since <span class="cit" onclick="openCard('parthenon-pediment')">[Fig. A]</span>. Greece has formally requested their return since 1983. The British Museum's continued refusal to repatriate is not inertia — it is an active archival decision, renewed daily, about whose version of history occupies the first screen.</p>
 
+  <span class="card-anchor" data-card="renno-recycled"></span>
   <p class="ep">Artists working in this space have developed counter-archival methods that parallel the necrographic orientation this paper proposes. Brazilian artist <span class="ht" onclick="openCard('renno-recycled')">#Rennó</span> recycles existing vernacular photographs — identification shots, found portraits, the "lowest categories of the image" — to recover "the little stories of the downtrodden and the vanquished" that successive political regimes have sought to suppress. Her practice of image conservation and recycling, informed by Vilém Flusser's concept of an "ecology of images," treats the archive not as authoritative storage but as material to be redistributed against the grain of institutional power.</p>
 
+  <span class="card-anchor" data-card="kaphar-process"></span>
+  <span class="card-anchor" data-card="universal-museum-myth"></span>
   <p class="ep"><span class="ht" onclick="openCard('kaphar-process')">#Kaphar</span> operates directly inside the Western archive — appropriating canonical paintings, then cutting away figures, veiling faces, or burying subjects beneath layers of canvas. These are not aesthetic gestures; they are procedural metaphors for erasure, suppression, and omission within historical record-keeping. Kaphar's process makes absence as legible as presence, refusing the closure that would allow historical reckoning to feel complete. The same methodological commitment drives the author's own work <span class="cit" onclick="openCard('universal-museum-myth')">[Fig. B]</span> — a book design project that traces the colonial plunder of four cultures (the Tlingit, the Parthenon, China's Yuanmingyuan, Benin City) before turning, in its latter half, toward abstraction and restitution: the "X" on the opening page marking the transformation from a universal "+" to a definitive act of return.</p>
 
+  <span class="card-anchor" data-card="jeff-wall-dead-troops"></span>
   <p class="ep">Jeff Wall's <em>Dead Troops Talk</em> <span class="cit" onclick="openCard('jeff-wall-dead-troops')">[1992]</span> stages a fictional aftermath of a Soviet ambush in Afghanistan — dead soldiers interacting, oblivious to their own deaths. The work refuses documentary photography's claim to neutrality while using its visual language. As a counter-archival gesture, it makes the undocumented visible through deliberate fabrication — a strategy that anticipates questions this paper raises about the generative archive: what happens when the archive begins not merely to suppress the record but to generate one in its place?</p>
 </div>
 
@@ -743,11 +768,70 @@ const REELS = [
 ];
 
 var selItem=null, currentCard=null, lockedSections=5, reelsBuilt=false;
+var hintPanelOpen=false;
+
+function hintDone(id){
+  var b=document.getElementById('lock-'+id);
+  return !!(b&&b.classList.contains('done'));
+}
+
+function renderHintPanel(){
+  var list=document.getElementById('hint-list');
+  if(!list)return;
+  var hints=[
+    {id:'theory',label:'II — Theory lock',value:'Key phrase: "what can be said".'},
+    {id:'museum',label:'III — Historical Touchpoint lock',value:'Key term: "necrography".'},
+    {id:'holocaust',label:'IV — Case Study I lock',value:'Enter: "holocaust by bullets".'},
+    {id:'noble',label:'IV — Case Study II interaction',value:'Select result #6: "Black Girls Code".'},
+    {id:'interlude',label:'Interlude lock',value:'Counter-language key: "watermelon" (word or emoji context).'}
+  ];
+  var html='';
+  hints.forEach(function(h){
+    html+='<div class="hint-item'+(hintDone(h.id)?' done':'')+'">'
+      +'<div class="hint-k">'+h.label+(hintDone(h.id)?' — restored':' — locked')+'</div>'
+      +'<div class="hint-v">'+h.value+'</div>'
+    +'</div>';
+  });
+  list.innerHTML=html;
+}
+
+function setHintPanel(open){
+  var panel=document.getElementById('hint-panel');
+  var btn=document.getElementById('nav-counter');
+  if(!panel||!btn)return;
+  hintPanelOpen=open;
+  panel.classList.toggle('open',open);
+  panel.setAttribute('aria-hidden',open?'false':'true');
+  btn.setAttribute('aria-expanded',open?'true':'false');
+}
+
+function setupHintPanel(){
+  var btn=document.getElementById('nav-counter');
+  if(!btn)return;
+  btn.addEventListener('click',function(e){
+    e.stopPropagation();
+    renderHintPanel();
+    setHintPanel(!hintPanelOpen);
+  });
+  document.addEventListener('click',function(e){
+    var panel=document.getElementById('hint-panel');
+    if(!panel||!hintPanelOpen)return;
+    if(panel.contains(e.target)||e.target===btn)return;
+    setHintPanel(false);
+  });
+}
 
 function updateCounter(){
   var el=document.getElementById('nav-counter');
-  if(lockedSections===0){el.textContent='ALL CONTENT RESTORED';el.classList.add('cleared');}
-  else{el.textContent=lockedSections+(lockedSections===1?' SECTION':' SECTIONS')+' SUPPRESSED';el.classList.remove('cleared');}
+  if(!el)return;
+  if(lockedSections===0){
+    el.textContent='ARCHIVE RESTORED — CLICK TO REVIEW ALL KEYS';
+    el.classList.add('cleared');
+  } else {
+    el.textContent=lockedSections+' ARCHIVE KEYS REMAINING';
+    el.classList.remove('cleared');
+  }
+  renderHintPanel();
 }
 
 function switchView(v){
@@ -839,15 +923,14 @@ function renderViewer(item){
     if(item.source)h+='<div class="vc-source" style="padding-top:12px;border-top:.5px solid var(--b1)">&mdash; '+item.source+'</div>';
   }
   if(item.caption){
-    if(item.img&&item.status==='suppressed'){
-      h+='<div class="vc-img suppressed"><span class="vc-img-label">'+(item.figNum||'ARCHIVE')+'</span></div>';
-    } else if(item.img&&item.img2){
+    if(item.img&&item.img2){
       h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
       h+='<div><img src="'+item.img+'" alt="Feed A" style="width:100%;display:block" onerror="this.style.display=&quot;none&quot;"></div>';
       h+='<div><img src="'+item.img2+'" alt="Feed B" style="width:100%;display:block" onerror="this.style.display=&quot;none&quot;"></div>';
       h+='</div>';
     } else if(item.img){
-      h+='<img src="'+item.img+'" alt="'+item.title.replace(/"/g,"&quot;")+'" style="width:100%;display:block;margin-bottom:14px" onerror="this.style.display=&quot;none&quot;">';
+      var imgClass=item.status==='suppressed'?' class="suppressed"':'';
+      h+='<img src="'+item.img+'"'+imgClass+' alt="'+item.title.replace(/"/g,"&quot;")+'" style="width:100%;display:block;margin-bottom:14px" onerror="this.style.display=&quot;none&quot;">';
     } else {
       h+='<div class="vc-img"><span class="vc-img-label">'+(item.figNum||'ARCHIVE')+'</span></div>';
     }
@@ -939,17 +1022,24 @@ function setupEssayScroll(){
   scroll.addEventListener('scroll',function(){
     var pct=scroll.scrollTop/(scroll.scrollHeight-scroll.clientHeight)*100;
     document.getElementById('ipf').style.width=pct+'%';
-    var aS=null, aC=[];
+    var aS=null, aC=[], aEl=null;
     document.querySelectorAll('.e-section').forEach(function(s){
       var r=s.getBoundingClientRect();
       if(r.top<window.innerHeight*0.6&&r.bottom>0){
         aS=s.dataset.s;
+        aEl=s;
         if(s.dataset.c)s.dataset.c.split(',').forEach(function(c){aC.push(c.trim());});
       }
     });
     if(aS){
       document.querySelectorAll('.ci').forEach(function(el){el.classList.toggle('active',el.dataset.s===aS);});
       var cid=CARD_MAP[aS];
+      if(aEl){
+        aEl.querySelectorAll('.card-anchor').forEach(function(anchor){
+          var ar=anchor.getBoundingClientRect();
+          if(ar.top<window.innerHeight*0.46)cid=anchor.dataset.card||cid;
+        });
+      }
       if(cid){var item=ITEMS.find(function(i){return i.id===cid;});if(item)showPanelCard(item);}
     }
     document.querySelectorAll('.con').forEach(function(el){el.classList.toggle('active',aC.indexOf(el.dataset.t)>=0);});
@@ -1126,6 +1216,7 @@ function showReel(i){
 function init(){
   renderResults(ITEMS);
   updateStats();
+  setupHintPanel();
   setupFilters();
   setupEssayScroll();
   setupChapNav();
